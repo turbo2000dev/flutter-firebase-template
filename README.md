@@ -280,6 +280,35 @@ See `docs/GIT_WORKFLOW.md` for complete branching strategy.
 - **Commit-msg**: Enforce conventional commits
 - **CI/CD**: Full pipeline on every push
 
+## Documentation
+
+**Start here:** [Documentation Hub](./docs/README.md) - Central navigation for all documentation.
+
+### Quick Links
+
+| Category | Key Documents |
+|----------|---------------|
+| **Getting Started** | [Documentation Hub](./docs/README.md) · [Claude Code Workflow](./docs/development/CLAUDE-CODE-WORKFLOW.md) |
+| **Development** | [Git Hooks](./docs/development/git-hooks.md) · [Weekly Workflow](./docs/ci-cd/weekly-workflow.md) |
+| **CI/CD** | [Secrets Setup](./docs/ci-cd/secrets-setup.md) · [Firebase Deployment](./docs/ci-cd/firebase-deployment.md) |
+| **Architecture** | [Architecture Guide](./guidelines/architecture.md) · [Astro Integration](./docs/Astro%20Flutter%20Integration.md) |
+| **Code Quality** | [Coding Standards](./guidelines/coding_standards.md) · [Testing Strategy](./guidelines/testing_strategy.md) |
+| **Operations** | [Deployment Guide](./guidelines/deployment.md) · [Git Workflow](./docs/GIT_WORKFLOW.md) |
+
+### Guidelines Reference
+
+All development guidelines are in the `/guidelines/` directory:
+
+- `architecture.md` - Clean architecture patterns
+- `coding_standards.md` - Style guide and conventions
+- `state_management.md` - Riverpod 3.0 patterns
+- `testing_strategy.md` - Testing pyramid and examples
+- `security_guidelines.md` - Security best practices
+- `performance.md` - Optimization strategies
+- `deployment.md` - Multi-environment deployment
+- `environments.md` - Environment configuration
+- `astro-development.md` - Landing page development
+
 ## Requirements
 
 - Flutter 3.x+
