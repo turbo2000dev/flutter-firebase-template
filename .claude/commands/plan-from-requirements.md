@@ -475,7 +475,7 @@ Please choose:
 
 Wait for explicit user approval before proceeding.
 
-**Do NOT write to PLAN.md without approval.**
+**Do NOT write the plan without approval.**
 
 If user requests adjustments:
 - Make the changes
@@ -484,21 +484,76 @@ If user requests adjustments:
 
 ---
 
-## Step 9: Write Plan to PLAN.md
+## Step 9: Ask Where to Save the Plan
 
-After approval:
+After user approves the plan content, ask where to save it using AskUserQuestion:
 
+```
+Question: "Where should I save this development plan?"
+Header: "Plan file"
+Options:
+- Label: "PLAN.md (Recommended)"
+  Description: "Create or replace PLAN.md - standard location for /execute-plan command"
+- Label: "Add to existing PLAN.md"
+  Description: "Append this plan to the existing PLAN.md file (useful for multi-feature planning)"
+- Label: "Separate file with custom name"
+  Description: "Create a new file like plans/feature-name.md - useful for archiving or parallel plans"
+```
+
+**If user chooses "Separate file with custom name":**
+```
+Follow-up question: "What should I name the plan file?"
+Suggest: plans/[feature-name-kebab-case].md
+
+Example suggestions based on feature:
+- "User Profile Management" → plans/user-profile-management.md
+- "Authentication Flow" → plans/authentication-flow.md
+- "Dashboard Widgets" → plans/dashboard-widgets.md
+```
+
+---
+
+## Step 10: Write Plan to Selected Location
+
+After approval and file location selection:
+
+**Option A: PLAN.md (new/replace)**
 ```markdown
-Use the Write tool to create PLAN.md with the complete plan.
+Use the Write tool to create/overwrite PLAN.md with the complete plan.
 
 Include at the top:
 **Requirements Source:** [file_path]
 **Requirements Last Modified:** [file modification date]
 ```
 
+**Option B: Add to existing PLAN.md**
+```markdown
+1. Read existing PLAN.md
+2. Add a separator and the new plan:
+   ---
+
+   # [NEW PLAN BELOW - Added on DATE]
+   # Requirements Source: [file_path]
+
+   ---
+
+   [New plan content]
+3. Write the combined content back to PLAN.md
+```
+
+**Option C: Separate file**
+```markdown
+1. Create the plans/ directory if it doesn't exist
+2. Write the plan to the specified path (e.g., plans/feature-name.md)
+3. Include requirements source reference in the plan header
+4. Note: /execute-plan defaults to PLAN.md, so inform user how to execute:
+   - Either: move/copy to PLAN.md when ready to execute
+   - Or: manually specify the file path when running execute-plan
+```
+
 ---
 
-## Step 10: Link Requirements File
+## Step 11: Link Requirements File
 
 Add a reference to the requirements file in the plan:
 
@@ -518,8 +573,11 @@ This plan was created from: `[file_path]`
 
 ---
 
-## Step 11: Completion Message
+## Step 12: Completion Message
 
+Adjust the completion message based on where the plan was saved:
+
+**If saved to PLAN.md:**
 ```markdown
 ✅ **Development Plan Created Successfully**
 
@@ -552,14 +610,6 @@ All requirements from `[file_path]` have been incorporated into the plan.
 4. **Pause/Resume:** Stop anytime, resume later with `/execute-plan`
 5. **Make changes:** Edit `PLAN.md` manually if needed
 
-## Available Commands
-
-- `/execute-plan` - Begin or continue plan execution
-- `/plan-from-requirements` - Create new plan from requirements file
-- `/plan` - Create plan interactively (without requirements file)
-- `/new-feature` - Skip planning, traditional workflow
-- `/implement` - Skip planning, streamlined workflow
-
 ## Requirements Traceability
 
 The plan includes a "Requirements Traceability" section showing:
@@ -567,9 +617,65 @@ The plan includes a "Requirements Traceability" section showing:
 - How each requirement is satisfied
 - Test coverage for each requirement
 
-**The plan is your single source of truth for development progress.**
+Ready to begin? Run `/execute-plan`
+```
+
+**If added to existing PLAN.md:**
+```markdown
+✅ **Development Plan Added Successfully**
+
+**File:** `PLAN.md` (appended to existing plans)
+**Status:** 📋 Approved - Ready for execution
+**Requirements Source:** `[file_path]`
+**Total Phases:** 11
+**Estimated Duration:** [X] hours
+
+## Plan Summary
+
+All requirements from `[file_path]` have been incorporated into the plan.
+
+## Next Steps
+
+1. **Review the plan:** Open `PLAN.md` and scroll to the new plan section
+2. **Start execution:** Run `/execute-plan` when ready
+3. **Note:** Multiple plans in PLAN.md - /execute-plan will work on incomplete tasks
 
 Ready to begin? Run `/execute-plan`
+```
+
+**If saved to separate file:**
+```markdown
+✅ **Development Plan Created Successfully**
+
+**File:** `[chosen-path]` (e.g., `plans/feature-name.md`)
+**Status:** 📋 Approved - Ready for execution
+**Requirements Source:** `[file_path]`
+**Total Phases:** 11
+**Estimated Duration:** [X] hours
+
+## Plan Summary
+
+All requirements from `[file_path]` have been incorporated into the plan.
+
+## Next Steps
+
+1. **Review the plan:** Open `[chosen-path]` to see complete details
+2. **To execute this plan, choose one option:**
+   - **Option A:** Copy to PLAN.md when ready: `cp [chosen-path] PLAN.md`
+   - **Option B:** Keep as archive and manually track progress
+
+3. **Why separate file?**
+   - Useful for planning multiple features in parallel
+   - Good for archiving completed plans
+   - Allows review before making it the "active" plan
+
+## Available Commands
+
+- `/execute-plan` - Execute PLAN.md (copy your plan there first)
+- `/plan-from-requirements` - Create another plan from requirements
+- `/plan` - Create plan interactively
+
+Ready to execute? Copy to PLAN.md first: `cp [chosen-path] PLAN.md`
 ```
 
 ---
