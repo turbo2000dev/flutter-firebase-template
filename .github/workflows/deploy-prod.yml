@@ -1,0 +1,259 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      confirm:
+        description: 'Type "deploy-prod" to confirm production deployment'
+        required: true
+        type: string
+      skip_tests:
+        description: 'Skip tests for urgent deployment (use with caution!)'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  FLUTTER_VERSION: '3.38.0'
+  NODE_VERSION: '20'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  validate:
+    name: Validate Deployment
+    runs-on: ubuntu-latest
+    outputs:
+      is_urgent: ${{ steps.check-urgent.outputs.urgent }}
+
+    steps:
+      - name: Validate confirmation
+        if: github.event.inputs.confirm != 'deploy-prod'
+        run: |
+          echo "❌ Deployment cancelled. You must type 'deploy-prod' to confirm."
+          exit 1
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify branch
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "❌ Production deployments must be from the 'main' branch."
+            echo "Current branch: ${{ github.ref }}"
+            exit 1
+          fi
+
+      - name: Check for urgent deployment
+        id: check-urgent
+        run: |
+          # Check both: manual skip_tests input OR commit message starting with URGENT
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          if [ "${{ github.event.inputs.skip_tests }}" == "true" ] || [[ "$COMMIT_MSG" == URGENT* ]]; then
+            echo "urgent=true" >> $GITHUB_OUTPUT
+            echo "::warning::⚠️ URGENT PRODUCTION deployment - skipping tests!"
+          else
+            echo "urgent=false" >> $GITHUB_OUTPUT
+          fi
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: validate
+    if: needs.validate.outputs.is_urgent != 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Run code generation
+        run: flutter pub run build_runner build --delete-conflicting-outputs
+
+      - name: Analyze code
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test --coverage
+
+      - name: Install lcov
+        run: sudo apt-get update && sudo apt-get install -y lcov
+
+      - name: Check coverage
+        run: |
+          # Remove generated files from coverage
+          lcov --ignore-errors unused --remove coverage/lcov.info \
+            '*.g.dart' \
+            '*.freezed.dart' \
+            '*.gr.dart' \
+            '*.mocks.dart' \
+            '**/generated/**' \
+            '**/l10n/**' \
+            -o coverage/lcov_filtered.info
+
+          echo "=== Coverage (excluding generated code) ==="
+          lcov --summary coverage/lcov_filtered.info 2>&1
+
+          # Extract coverage percentage
+          COVERAGE=$(lcov --summary coverage/lcov_filtered.info 2>&1 | grep "lines" | sed 's/.*lines[^0-9]*\([0-9][0-9]*\.[0-9]*\).*/\1/')
+          echo "Parsed Coverage: $COVERAGE%"
+
+          if [ -z "$COVERAGE" ]; then
+            echo "⚠️ Could not parse coverage percentage"
+          elif (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "⚠️ Coverage is below 80% ($COVERAGE%)"
+          else
+            echo "✅ Coverage is $COVERAGE% (meets 80% threshold)"
+          fi
+
+  deploy-prod:
+    name: Build and Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [validate, test]
+    if: always() && (needs.validate.outputs.is_urgent == 'true' || needs.test.result == 'success')
+    environment:
+      name: production
+      url: https://{{PROD_DOMAIN}}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: landing-page/package-lock.json
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Run code generation
+        run: flutter pub run build_runner build --delete-conflicting-outputs
+
+      - name: Build Astro landing page
+        if: hashFiles('landing-page/package.json') != ''
+        run: |
+          cd landing-page
+          npm ci
+          npm run build
+          mkdir -p ../public
+          cp -r dist/* ../public/
+
+      - name: Create placeholder landing page
+        if: hashFiles('landing-page/package.json') == ''
+        run: |
+          mkdir -p public
+          echo '<!DOCTYPE html><html><head><title>{{PROJECT_DISPLAY_NAME}}</title></head><body><h1>{{PROJECT_DISPLAY_NAME}}</h1><a href="/app">Open App</a></body></html>' > public/index.html
+
+      - name: Build Flutter web (Release)
+        run: |
+          flutter build web --release --dart-define=ENVIRONMENT=prod --base-href /app/
+          mkdir -p public/app
+          cp -r build/web/* public/app/
+
+      - name: Deploy to Firebase Hosting (Production)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_{{PROJECT_NAME_UPPER}} }}
+          projectId: {{FIREBASE_PROJECT_ID}}
+          target: prod
+          channelId: live
+
+      - name: Authenticate to Google Cloud
+        if: hashFiles('images/wizard/en/*.png') != '' || hashFiles('images/wizard/fr/*.png') != ''
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_{{PROJECT_NAME_UPPER}} }}
+
+      - name: Setup Google Cloud SDK
+        if: hashFiles('images/wizard/en/*.png') != '' || hashFiles('images/wizard/fr/*.png') != ''
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: {{FIREBASE_PROJECT_ID}}
+
+      - name: Upload Wizard Images to Firebase Storage
+        if: hashFiles('images/wizard/en/*.png') != '' || hashFiles('images/wizard/fr/*.png') != ''
+        run: |
+          echo "📤 Uploading wizard images to Firebase Storage..."
+          BUCKET="{{FIREBASE_PROJECT_ID}}.firebasestorage.app"
+          REMOTE_PATH="wizard_images"
+
+          # Upload English images
+          if [ -d "images/wizard/en" ] && ls images/wizard/en/*.png 1> /dev/null 2>&1; then
+            echo "Uploading English wizard images..."
+            gsutil -m -h "Cache-Control:public, max-age=604800" \
+                   -h "Content-Type:image/png" \
+                   cp images/wizard/en/*.png "gs://$BUCKET/$REMOTE_PATH/en/"
+            echo "✅ English images uploaded"
+          fi
+
+          # Upload French images
+          if [ -d "images/wizard/fr" ] && ls images/wizard/fr/*.png 1> /dev/null 2>&1; then
+            echo "Uploading French wizard images..."
+            gsutil -m -h "Cache-Control:public, max-age=604800" \
+                   -h "Content-Type:image/png" \
+                   cp images/wizard/fr/*.png "gs://$BUCKET/$REMOTE_PATH/fr/"
+            echo "✅ French images uploaded"
+          fi
+
+      - name: Create Git Tag
+        continue-on-error: true
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          TAG="deploy-$(date +'%Y%m%d-%H%M%S')"
+          git tag -a "$TAG" -m "Production deployment"
+          git push origin "$TAG"
+
+      - name: Deployment Summary
+        run: |
+          echo "## 🚀 Production Deployment Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.validate.outputs.is_urgent }}" == "true" ]; then
+            echo "> [!CAUTION]" >> $GITHUB_STEP_SUMMARY
+            echo "> **⚠️ URGENT DEPLOYMENT** - Tests were skipped!" >> $GITHUB_STEP_SUMMARY
+            echo "> This deployment bypassed quality checks. Schedule a follow-up deployment with full testing ASAP." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "**Environment:** Production" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**URLs:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Landing Page: https://{{PROD_DOMAIN}}" >> $GITHUB_STEP_SUMMARY
+          echo "- Flutter App: https://{{PROD_DOMAIN}}/app" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          # Check if wizard images were uploaded
+          if [ -d "images/wizard/en" ] || [ -d "images/wizard/fr" ]; then
+            echo "**Wizard Images:** ✅ Uploaded to Firebase Storage" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Wizard Images:** ⏭️ Skipped (no images/ directory)" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Post-Deployment Checklist" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Verify landing page loads correctly" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Verify Flutter app loads at /app" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Test authentication flow" >> $GITHUB_STEP_SUMMARY
+          echo "- [ ] Monitor Crashlytics for new errors" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.validate.outputs.is_urgent }}" == "true" ]; then
+            echo "- [ ] **Schedule follow-up deployment with full tests**" >> $GITHUB_STEP_SUMMARY
+          fi

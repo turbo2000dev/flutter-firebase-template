@@ -1,0 +1,305 @@
+# =============================================================================
+# Deploy Beta - TestFlight (iOS) and Play Store Internal Testing (Android)
+# =============================================================================
+#
+# This workflow can be triggered manually or automatically on production deployment.
+#
+# Required Secrets:
+#   iOS:
+#     - IOS_GOOGLE_SERVICE_INFO: Base64 encoded GoogleService-Info.plist
+#     - IOS_CERTIFICATE_P12: Base64 encoded distribution certificate
+#     - IOS_CERTIFICATE_PASSWORD: Password for the .p12 file
+#     - IOS_PROVISIONING_PROFILE: Base64 encoded .mobileprovision file
+#     - APP_STORE_CONNECT_KEY_ID: App Store Connect API Key ID
+#     - APP_STORE_CONNECT_ISSUER_ID: App Store Connect Issuer ID
+#     - APP_STORE_CONNECT_API_KEY: Base64 encoded .p8 API key content
+#
+#   Android:
+#     - ANDROID_KEYSTORE: Base64 encoded .jks keystore file
+#     - ANDROID_KEY_ALIAS: Key alias in the keystore
+#     - ANDROID_KEY_PASSWORD: Password for the key
+#     - ANDROID_STORE_PASSWORD: Password for the keystore
+#     - PLAY_STORE_SERVICE_ACCOUNT: Base64 encoded Google Play service account JSON
+#
+# =============================================================================
+
+name: Deploy Beta
+
+on:
+  # Manual trigger with platform selection
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to deploy'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - ios
+          - android
+          - all
+      build_number:
+        description: 'Build number (leave empty for git commit count)'
+        required: false
+        type: string
+
+  # Auto-trigger when production web deployment completes
+  workflow_run:
+    workflows: ["Deploy Production"]
+    types:
+      - completed
+    branches:
+      - main
+
+env:
+  FLUTTER_VERSION: '3.38.0'
+  RUBY_VERSION: '3.2'
+  JAVA_VERSION: '17'
+
+jobs:
+  # =============================================================================
+  # Prepare - Calculate build number and validate
+  # =============================================================================
+  prepare:
+    name: Prepare Build
+    runs-on: ubuntu-latest
+    outputs:
+      build_number: ${{ steps.build_number.outputs.value }}
+      version: ${{ steps.version.outputs.value }}
+      deploy_ios: ${{ steps.platform.outputs.ios }}
+      deploy_android: ${{ steps.platform.outputs.android }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for commit count
+
+      - name: Calculate build number
+        id: build_number
+        run: |
+          if [[ -n "${{ github.event.inputs.build_number }}" ]]; then
+            echo "value=${{ github.event.inputs.build_number }}" >> $GITHUB_OUTPUT
+          else
+            echo "value=$(git rev-list --count HEAD)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get version from pubspec
+        id: version
+        run: |
+          VERSION=$(grep "^version:" pubspec.yaml | sed 's/version: *\([0-9.]*\).*/\1/')
+          echo "value=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Determine platforms to deploy
+        id: platform
+        run: |
+          PLATFORM="${{ github.event.inputs.platform || 'all' }}"
+
+          if [[ "$PLATFORM" == "ios" ]] || [[ "$PLATFORM" == "all" ]]; then
+            echo "ios=true" >> $GITHUB_OUTPUT
+          else
+            echo "ios=false" >> $GITHUB_OUTPUT
+          fi
+
+          if [[ "$PLATFORM" == "android" ]] || [[ "$PLATFORM" == "all" ]]; then
+            echo "android=true" >> $GITHUB_OUTPUT
+          else
+            echo "android=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Print build info
+        run: |
+          echo "Version: ${{ steps.version.outputs.value }}"
+          echo "Build Number: ${{ steps.build_number.outputs.value }}"
+          echo "Deploy iOS: ${{ steps.platform.outputs.ios }}"
+          echo "Deploy Android: ${{ steps.platform.outputs.android }}"
+
+  # =============================================================================
+  # iOS - Build and deploy to TestFlight
+  # =============================================================================
+  deploy-ios:
+    name: Deploy iOS to TestFlight
+    needs: prepare
+    if: needs.prepare.outputs.deploy_ios == 'true'
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          flutter pub get
+          bundle install
+
+      - name: Setup Firebase config
+        env:
+          IOS_GOOGLE_SERVICE_INFO: ${{ secrets.IOS_GOOGLE_SERVICE_INFO }}
+        run: |
+          # Decode GoogleService-Info.plist from base64 secret
+          echo "$IOS_GOOGLE_SERVICE_INFO" | base64 --decode > ios/Runner/GoogleService-Info.plist
+
+      - name: Setup iOS signing
+        env:
+          IOS_CERTIFICATE_P12: ${{ secrets.IOS_CERTIFICATE_P12 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD || 'temporary_password' }}
+        run: |
+          # Create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+
+          # Add to search list so Xcode can find it
+          security list-keychains -d user -s build.keychain $(security list-keychains -d user | tr -d '"')
+
+          # Import certificate
+          echo "$IOS_CERTIFICATE_P12" | base64 --decode > distribution.p12
+          security import distribution.p12 -k build.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -A
+
+          # Allow codesign to access the keychain without prompting
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+
+          # Install provisioning profile
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$IOS_PROVISIONING_PROFILE" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/profile.mobileprovision
+
+          # Verify certificate was imported
+          echo "Certificates in keychain:"
+          security find-identity -v -p codesigning build.keychain
+
+      - name: Build and upload to TestFlight
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: |
+          bundle exec fastlane ios beta build_number:${{ needs.prepare.outputs.build_number }}
+
+      - name: Cleanup keychain
+        if: always()
+        run: |
+          security delete-keychain build.keychain || true
+
+  # =============================================================================
+  # Android - Build and deploy to Play Store Internal Testing
+  # =============================================================================
+  deploy-android:
+    name: Deploy Android to Play Store
+    needs: prepare
+    if: needs.prepare.outputs.deploy_android == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ env.RUBY_VERSION }}
+          bundler-cache: true
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          flutter pub get
+          bundle install
+
+      - name: Setup Android signing
+        env:
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          # Decode keystore
+          echo "$ANDROID_KEYSTORE" | base64 --decode > android/upload-keystore.jks
+
+          # Create key.properties
+          cat > android/key.properties << EOF
+          storePassword=$ANDROID_STORE_PASSWORD
+          keyPassword=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=../upload-keystore.jks
+          EOF
+
+      - name: Setup Play Store credentials
+        env:
+          PLAY_STORE_SERVICE_ACCOUNT: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$PLAY_STORE_SERVICE_ACCOUNT" | base64 --decode > fastlane/play-store-key.json
+
+      - name: Build and upload to Play Store
+        env:
+          GOOGLE_PLAY_JSON_KEY_PATH: fastlane/play-store-key.json
+        run: |
+          bundle exec fastlane android beta build_number:${{ needs.prepare.outputs.build_number }}
+
+      - name: Cleanup credentials
+        if: always()
+        run: |
+          rm -f android/upload-keystore.jks
+          rm -f android/key.properties
+          rm -f fastlane/play-store-key.json
+
+  # =============================================================================
+  # Summary
+  # =============================================================================
+  summary:
+    name: Deployment Summary
+    needs: [prepare, deploy-ios, deploy-android]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Summary
+        run: |
+          echo "## Beta Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** ${{ needs.prepare.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Number:** ${{ needs.prepare.outputs.build_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ needs.deploy-ios.result }}" == "success" ]]; then
+            echo "- ✅ **iOS:** Deployed to TestFlight" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ needs.deploy-ios.result }}" == "skipped" ]]; then
+            echo "- ⏭️ **iOS:** Skipped" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ❌ **iOS:** Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [[ "${{ needs.deploy-android.result }}" == "success" ]]; then
+            echo "- ✅ **Android:** Deployed to Play Store Internal" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ needs.deploy-android.result }}" == "skipped" ]]; then
+            echo "- ⏭️ **Android:** Skipped" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ❌ **Android:** Failed" >> $GITHUB_STEP_SUMMARY
+          fi

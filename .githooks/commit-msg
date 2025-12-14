@@ -1,0 +1,96 @@
+#!/bin/bash
+# Commit message hook
+# Validates commit message format (Conventional Commits)
+#
+# DISABLED: This hook is currently disabled (no execute permission)
+# To re-enable: chmod +x .githooks/commit-msg
+
+exit 0
+
+set -e
+
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(cat "$COMMIT_MSG_FILE")
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+print_error() {
+    echo -e "${RED}❌ $1${NC}"
+}
+
+print_success() {
+    echo -e "${GREEN}✅ $1${NC}"
+}
+
+print_info() {
+    echo "ℹ️  $1"
+}
+
+# Skip merge commits
+if [[ $COMMIT_MSG =~ ^Merge ]]; then
+    exit 0
+fi
+
+# Check for conventional commit format
+# Format: type(scope): subject
+# Types: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert
+CONVENTIONAL_COMMIT_REGEX="^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\(.+\))?: .{1,}"
+
+if [[ ! $COMMIT_MSG =~ $CONVENTIONAL_COMMIT_REGEX ]]; then
+    print_error "Invalid commit message format"
+    echo ""
+    echo "Commit message must follow Conventional Commits format:"
+    echo ""
+    echo "  type(scope): subject"
+    echo ""
+    echo "Examples:"
+    echo "  feat(auth): add Google sign-in"
+    echo "  fix(dashboard): resolve loading state issue"
+    echo "  docs: update README with setup instructions"
+    echo "  test(calculator): add edge case tests"
+    echo "  chore: update dependencies"
+    echo ""
+    echo "Valid types:"
+    echo "  feat:     New feature"
+    echo "  fix:      Bug fix"
+    echo "  docs:     Documentation only"
+    echo "  style:    Code style/formatting"
+    echo "  refactor: Code refactoring"
+    echo "  test:     Adding/updating tests"
+    echo "  chore:    Maintenance tasks"
+    echo "  perf:     Performance improvements"
+    echo "  ci:       CI/CD changes"
+    echo "  build:    Build system changes"
+    echo "  revert:   Revert previous commit"
+    echo ""
+    echo "Scope is optional but recommended (e.g., auth, dashboard, api)"
+    echo ""
+    exit 1
+fi
+
+# Check subject length (should be <= 72 characters for first line)
+FIRST_LINE=$(echo "$COMMIT_MSG" | head -n 1)
+if [ ${#FIRST_LINE} -gt 72 ]; then
+    print_error "Commit subject is too long (${#FIRST_LINE} > 72 characters)"
+    echo ""
+    echo "Keep the first line under 72 characters."
+    echo "Use additional lines for detailed explanation if needed."
+    exit 1
+fi
+
+# Check for proper capitalization (subject should not start with capital letter after colon)
+if [[ $FIRST_LINE =~ :\ [A-Z] ]]; then
+    print_error "Commit subject should not start with a capital letter"
+    echo ""
+    echo "Use lowercase after the colon:"
+    echo "  Good: feat(auth): add Google sign-in"
+    echo "  Bad:  feat(auth): Add Google sign-in"
+    exit 1
+fi
+
+print_success "Commit message format: OK"
+exit 0

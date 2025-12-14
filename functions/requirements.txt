@@ -1,0 +1,8 @@
+# Firebase Functions SDK
+firebase-functions>=0.4.0
+firebase-admin>=6.2.0
+
+# Add your dependencies below
+# Example:
+# requests>=2.31.0
+# pandas>=2.0.0

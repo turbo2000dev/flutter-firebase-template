@@ -1,0 +1,85 @@
+{
+  "hosting": [
+    {
+      "target": "dev",
+      "public": "public",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "cleanUrls": true,
+      "headers": [
+        {
+          "source": "**/*.@(eot|otf|ttf|ttc|woff|woff2)",
+          "headers": [{ "key": "Access-Control-Allow-Origin", "value": "*" }]
+        },
+        {
+          "source": "**/*.@(js|css)",
+          "headers": [{ "key": "Cache-Control", "value": "max-age=31536000" }]
+        }
+      ],
+      "rewrites": [
+        { "source": "/app/**", "destination": "/app/index.html" },
+        { "source": "**", "destination": "/index.html" }
+      ]
+    },
+    {
+      "target": "staging",
+      "public": "public",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "cleanUrls": true,
+      "headers": [
+        {
+          "source": "**/*.@(eot|otf|ttf|ttc|woff|woff2)",
+          "headers": [{ "key": "Access-Control-Allow-Origin", "value": "*" }]
+        },
+        {
+          "source": "**/*.@(js|css)",
+          "headers": [{ "key": "Cache-Control", "value": "max-age=31536000" }]
+        }
+      ],
+      "rewrites": [
+        { "source": "/app/**", "destination": "/app/index.html" },
+        { "source": "**", "destination": "/index.html" }
+      ]
+    },
+    {
+      "target": "prod",
+      "public": "public",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "cleanUrls": true,
+      "headers": [
+        {
+          "source": "**/*.@(eot|otf|ttf|ttc|woff|woff2)",
+          "headers": [{ "key": "Access-Control-Allow-Origin", "value": "*" }]
+        },
+        {
+          "source": "**/*.@(js|css)",
+          "headers": [{ "key": "Cache-Control", "value": "max-age=31536000" }]
+        }
+      ],
+      "rewrites": [
+        { "source": "/app/**", "destination": "/app/index.html" },
+        { "source": "**", "destination": "/index.html" }
+      ]
+    }
+  ],
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "runtime": "python312",
+      "ignore": [
+        "venv",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
+  ],
+  "storage": {
+    "rules": "storage.rules"
+  }
+}

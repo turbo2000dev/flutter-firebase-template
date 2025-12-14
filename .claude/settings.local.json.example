@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dart format:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter test:*)",
+      "Bash(flutter pub run build_runner build:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(git push:*)",
+      "Bash(gh workflow run:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run watch:*)",
+      "Bash(gh run view:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "Bash(chmod:*)",
+      "Bash(ls:*)",
+      "Bash(python3:*)",
+      "Bash(dart fix:*)",
+      "Bash(./scripts/deploy.sh:*)",
+      "Edit",
+      "Read"
+    ],
+    "deny": []
+  }
+}

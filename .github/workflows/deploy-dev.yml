@@ -1,0 +1,82 @@
+name: Deploy to Development
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  FLUTTER_VERSION: '3.38.0'
+  NODE_VERSION: '20'
+
+jobs:
+  deploy-dev:
+    name: Build and Deploy to Dev
+    runs-on: ubuntu-latest
+    environment:
+      name: dev
+      url: https://dev.{{PROD_DOMAIN}}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: landing-page/package-lock.json
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Run code generation
+        run: flutter pub run build_runner build --delete-conflicting-outputs
+
+      - name: Build Astro landing page
+        if: hashFiles('landing-page/package.json') != ''
+        run: |
+          cd landing-page
+          npm ci
+          npm run build
+          mkdir -p ../public
+          cp -r dist/* ../public/
+
+      - name: Create placeholder landing page
+        if: hashFiles('landing-page/package.json') == ''
+        run: |
+          mkdir -p public
+          echo '<!DOCTYPE html><html><head><title>Retirement App - Dev</title></head><body><h1>Development Environment</h1><a href="/app">Open App</a></body></html>' > public/index.html
+
+      - name: Build Flutter web
+        run: |
+          flutter build web --dart-define=ENVIRONMENT=dev --base-href /app/
+          mkdir -p public/app
+          cp -r build/web/* public/app/
+
+      - name: Deploy to Firebase Hosting (Dev)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_{{PROJECT_NAME_UPPER}} }}
+          projectId: {{FIREBASE_PROJECT_ID}}
+          target: dev
+          channelId: live
+
+      - name: Deployment Summary
+        run: |
+          echo "## Deployment Complete! 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Development" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**URLs:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Landing Page: https://dev.{{PROD_DOMAIN}}" >> $GITHUB_STEP_SUMMARY
+          echo "- Flutter App: https://dev.{{PROD_DOMAIN}}/app" >> $GITHUB_STEP_SUMMARY

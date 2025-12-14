@@ -1,0 +1,39 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check file size (in bytes)
+    function isValidSize(maxSize) {
+      return request.resource.size < maxSize;
+    }
+
+    // Helper function to check content type
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    // User uploads - each user can only access their own files
+    match /users/{userId}/{allPaths=**} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if isAuthenticated()
+                   && request.auth.uid == userId
+                   && isValidSize(10 * 1024 * 1024); // 10MB max
+    }
+
+    // Public assets (e.g., app images)
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if false; // Only deploy via admin SDK
+    }
+
+    // Deny all other access by default
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

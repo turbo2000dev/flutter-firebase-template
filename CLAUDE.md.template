@@ -1,0 +1,470 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+This is a **{{PROJECT_DISPLAY_NAME}}** built with Flutter, targeting {{TARGET_MARKET}}.
+
+<!-- CUSTOMIZE: Add a brief description of your project's purpose -->
+{{PROJECT_DESCRIPTION}}
+
+**Platform:** Flutter 3.x+ (iOS, Android, Web)
+**Target Market:** {{TARGET_MARKET}}
+**Current State:** {{PROJECT_STATE}}
+
+## Essential Commands
+
+### Development
+
+```bash
+# Install dependencies
+flutter pub get
+
+# Run code generation (Riverpod, Freezed, JSON serialization)
+flutter pub run build_runner build --delete-conflicting-outputs
+
+# Watch mode for code generation during development
+flutter pub run build_runner watch --delete-conflicting-outputs
+
+# Run the app
+flutter run
+
+# Run on specific device
+flutter devices
+flutter run -d <device-id>
+
+# Hot reload: Press 'r' in terminal
+# Hot restart: Press 'R' in terminal
+```
+
+### Code Quality
+
+```bash
+# Format code (NOTE: Auto-formatted on commit via git hooks!)
+flutter format .
+
+# Analyze code
+flutter analyze
+
+# Fix auto-fixable issues
+dart fix --apply
+```
+
+**Note**: `dart format` runs automatically on every commit via git hooks - you rarely need to run it manually!
+
+### Testing
+
+```bash
+# Run all tests
+flutter test
+
+# Run tests with coverage
+flutter test --coverage
+
+# Analyze coverage (EXCLUDES generated files - always use this!)
+python3 scripts/coverage-report.py
+
+# Generate HTML coverage report
+genhtml coverage/lcov.info -o coverage/html
+open coverage/html/index.html
+
+# Run specific test file
+flutter test test/path/to/test_file.dart
+
+# Run widget tests
+flutter test test/widgets
+
+# Run integration tests
+flutter test integration_test
+```
+
+### Build
+
+```bash
+# Build for development
+flutter build apk --debug
+flutter build ios --debug
+
+# Build for production
+flutter build apk --release
+flutter build ios --release
+flutter build web --release
+```
+
+### Web Deployment (Multi-Environment)
+
+```bash
+# Build all components (landing page + Flutter app)
+./scripts/build-all.sh <env>          # dev, staging, or prod
+
+# Deploy to an environment
+./scripts/deploy.sh <env>             # dev, staging, or prod
+
+# Deploy with Cloud Functions
+./scripts/deploy.sh <env> --functions
+
+# Deploy with Firestore rules
+./scripts/deploy.sh <env> --rules
+
+# Deploy everything
+./scripts/deploy.sh <env> --all
+```
+
+### Landing Page Development (Astro)
+
+```bash
+cd landing-page
+
+# Install dependencies
+npm install
+
+# Start development server (http://localhost:4321)
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+### Cloud Functions (Python)
+
+```bash
+cd functions
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Test locally with emulator
+firebase emulators:start --only functions
+
+# Deploy functions
+firebase deploy --only functions
+
+# View logs
+firebase functions:log
+```
+
+## Architecture
+
+### High-Level Structure
+
+The application follows **Clean Architecture** with a **feature-first** organization approach. This means code is organized by feature/domain (auth, projects, etc.) rather than by technical layer (models, services, etc.).
+
+**Key Architectural Principles:**
+- **Separation of Concerns**: Clear boundaries between layers
+- **Dependency Inversion**: Dependencies point inward toward the domain
+- **Offline-First**: Local changes sync when online
+- **Feature-First Organization**: Code organized by business capability
+
+### Layer Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Presentation Layer                    │
+│                  (Widgets, Screens, UI)                  │
+├─────────────────────────────────────────────────────────┤
+│                    Application Layer                     │
+│              (Providers, Controllers, State)             │
+├─────────────────────────────────────────────────────────┤
+│                      Service Layer                       │
+│          (Business Operations, External Services)        │
+├─────────────────────────────────────────────────────────┤
+│                      Domain Layer                        │
+│           (Entities, Value Objects, Use Cases)          │
+├─────────────────────────────────────────────────────────┤
+│                       Data Layer                         │
+│        (Repositories, Data Sources, DTOs, Mappers)      │
+├─────────────────────────────────────────────────────────┤
+│                   Infrastructure Layer                   │
+│         (Firebase, Network, Storage, Platform)          │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Directory Structure
+
+```
+{{PROJECT_NAME}}/
+├── lib/                            # Flutter application source
+│   ├── main.dart                   # Application entry point
+│   ├── app.dart                    # App configuration
+│   ├── bootstrap.dart              # Initialization logic
+│   ├── core/                       # Shared utilities and configuration
+│   │   ├── config/                 # App configuration
+│   │   ├── constants/              # App-wide constants
+│   │   ├── errors/                 # Error handling
+│   │   ├── extensions/             # Dart extensions
+│   │   ├── localization/           # i18n/l10n
+│   │   ├── router/                 # Navigation
+│   │   ├── theme/                  # Theming
+│   │   ├── utils/                  # Utilities
+│   │   └── widgets/                # Shared widgets
+│   └── features/                   # Feature modules (organized by domain)
+│       ├── auth/                   # Authentication & account management
+│       └── ...                     # Add your features here
+│
+├── landing-page/                   # Astro landing page (SEO-optimized)
+│   ├── src/
+│   │   ├── components/             # Astro components
+│   │   ├── layouts/                # Page layouts
+│   │   ├── pages/                  # Routes
+│   │   ├── styles/                 # Global CSS
+│   │   └── i18n/                   # Translations
+│   ├── public/                     # Static assets
+│   ├── astro.config.mjs            # Astro configuration
+│   └── package.json
+│
+├── functions/                      # Firebase Cloud Functions (Python)
+│   ├── main.py                     # Function entry points
+│   └── requirements.txt            # Python dependencies
+│
+├── scripts/                        # Build and deployment scripts
+│   ├── build-all.sh                # Build landing page + Flutter
+│   ├── deploy.sh                   # Deploy to Firebase
+│   └── setup-hosting-targets.sh    # Initialize Firebase hosting targets
+│
+├── .github/workflows/              # GitHub Actions CI/CD
+│   ├── ci.yml                      # Main CI pipeline
+│   ├── deploy-dev.yml              # Deploy to development
+│   ├── deploy-staging.yml          # Deploy to staging
+│   └── deploy-prod.yml             # Deploy to production
+│
+├── test/                           # Flutter tests
+│   ├── unit/                       # Unit tests (50%)
+│   ├── widget/                     # Widget tests (30%)
+│   ├── integration/                # Integration tests (15%)
+│   ├── e2e/                        # E2E tests (5%)
+│   └── fixtures/                   # Test data and builders
+│
+├── guidelines/                     # Development guidelines
+├── docs/                           # Documentation
+├── firebase.json                   # Firebase configuration
+├── .firebaserc                     # Firebase project/targets config
+└── CLAUDE.md                       # This file
+```
+
+## State Management - Riverpod 3.0
+
+**Framework:** Riverpod 3.0+ with code generation
+
+### Provider Types & When to Use
+
+1. **`@riverpod` Provider** - Read-only computed state
+2. **`@riverpod FutureProvider`** - Asynchronous data fetching
+3. **`@riverpod StreamProvider`** - Real-time data
+4. **`@riverpod NotifierProvider`** - Synchronous state with mutations
+5. **`@riverpod AsyncNotifierProvider`** - Asynchronous state with mutations
+
+### Key Patterns
+
+- **Unidirectional data flow**: User Action → Provider → Use Case → Repository → Data Source
+- **Immutable state**: Use Freezed for all state classes
+- **Error handling**: Use `AsyncValue.when()` for consistent error/loading states
+- **Optimistic updates**: Update UI immediately, rollback on error
+- **Selective watching**: Use `.select()` to avoid unnecessary rebuilds
+
+## Data Architecture
+
+### Remote Storage: Firebase Firestore
+
+```
+users/{userId}
+  └── [user-specific collections]
+```
+
+**Security:** Row-level security via Firestore Rules - users can only access their own data
+
+### Local Storage: Hive
+
+- **Purpose**: Offline-first cache, user preferences
+- **Sync Strategy**: Cache-first read, optimistic updates, background sync
+- **Conflict Resolution**: Last-write-wins with timestamp
+
+## Code Standards
+
+### Naming Conventions
+
+- **Classes/Types**: PascalCase (`UserProfile`)
+- **Variables/Functions**: camelCase (`userName`)
+- **Constants**: lowerCamelCase (`defaultTimeout`)
+- **Private members**: Underscore prefix (`_privateField`)
+- **File names**: snake_case (`user_profile.dart`)
+
+### Required Patterns
+
+- **Freezed**: All domain entities and state classes must use Freezed for immutability
+- **Code generation**: Run `build_runner` after any changes to generated files
+- **Trailing commas**: Always use trailing commas for better formatting
+- **Documentation**: All public APIs must have dartdoc comments
+
+## Testing Requirements
+
+### Coverage Goals
+
+- **Overall**: Minimum 80% coverage
+- **Critical paths**: 100% coverage
+- **Domain layer**: 95% coverage
+- **Data layer**: 90% coverage
+- **Presentation layer**: 70% coverage
+
+### Testing Pyramid
+
+- **Unit tests** (50%): Business logic, domain models, use cases, utilities
+- **Widget tests** (30%): UI components, screens, user interactions
+- **Integration tests** (15%): Feature workflows, API integration
+- **E2E tests** (5%): Complete user journeys
+
+## Important Documentation
+
+### `/guidelines/` - Development Guidelines
+
+- **architecture.md**: Detailed architecture patterns and structure
+- **state_management.md**: Comprehensive Riverpod 3.0 patterns and examples
+- **coding_standards.md**: Complete style guide with examples
+- **testing_strategy.md**: Testing philosophy, examples, CI/CD setup
+- **security_guidelines.md**: Security best practices
+- **performance.md**: Performance optimization strategies
+- **deployment.md**: Multi-environment deployment procedures
+- **environments.md**: Dev/staging/prod environment configuration
+- **astro-development.md**: Landing page development with Astro
+
+### `/docs/` - Additional Documentation
+
+- **development/CLAUDE-CODE-WORKFLOW.md**: How to use Claude Code agents
+- **development/git-hooks.md**: Git hooks setup and usage
+- **ci-cd/weekly-workflow.md**: Weekly development cycle
+- **GIT_WORKFLOW.md**: Git branching strategy
+
+**When implementing features**: Always review the relevant guideline documents first.
+
+## Multi-Environment Deployment
+
+### Environments
+
+| Environment | Branch    | URL                    | Auto-Deploy |
+| ----------- | --------- | ---------------------- | ----------- |
+| Development | `develop` | {{DEV_URL}}            | Yes         |
+| Staging     | `staging` | {{STAGING_URL}}        | Yes         |
+| Production  | `main`    | {{PROD_URL}}           | Manual      |
+
+### Web Architecture
+
+```
+{{PROD_DOMAIN}}/           → Astro landing page (SEO-optimized)
+{{PROD_DOMAIN}}/app/       → Flutter web application
+```
+
+### Deployment Commands
+
+```bash
+# Development
+./scripts/deploy.sh dev
+
+# Staging (runs tests first)
+./scripts/deploy.sh staging
+
+# Production (requires confirmation)
+./scripts/deploy.sh prod
+```
+
+See `guidelines/deployment.md` for complete deployment procedures.
+
+## Claude Code Agents
+
+Specialized agents are available in `.claude/agents/` for different development tasks:
+
+| Agent                | Purpose                            |
+| -------------------- | ---------------------------------- |
+| **architect**        | Technical design and specification |
+| **developer**        | Flutter implementation             |
+| **reviewer**         | Code review and quality            |
+| **tester**           | Test strategy and implementation   |
+| **security**         | Security audits                    |
+| **performance**      | Performance optimization           |
+| **devops**           | CI/CD and deployment               |
+| **astro-developer**  | Landing page development           |
+| **python-developer** | Cloud Functions development        |
+
+### Claude Code Commands
+
+Available commands in `.claude/commands/`:
+
+- `/plan` - Create development plans
+- `/execute-plan` - Execute plans from PLAN.md
+- `/implement` - Implement features
+- `/deploy` - Deploy to an environment
+- `/build-all` - Build all components
+- `/landing-page` - Work on landing page
+
+## Firebase Integration
+
+### Services Used
+
+- **Firebase Auth**: Email/password + Google Sign-In
+- **Cloud Firestore**: Primary database with offline support
+- **Firebase Storage**: File storage
+- **Cloud Functions**: Server-side operations
+- **Firebase Analytics**: User behavior tracking
+- **Crashlytics**: Error tracking and monitoring
+
+## Key Development Workflows
+
+### Adding a New Feature
+
+1. Review requirements
+2. Review relevant guidelines in `/guidelines/`
+3. Create feature module structure:
+   ```
+   features/feature_name/
+   ├── domain/
+   ├── data/
+   ├── application/
+   └── presentation/
+   ```
+4. Implement domain layer first (entities, use cases)
+5. Implement data layer (repositories, DTOs)
+6. Implement application layer (providers)
+7. Implement presentation layer (UI)
+8. Write tests for each layer (aim for 80%+ coverage)
+9. Update documentation if needed
+
+### Working with Generated Code
+
+When you see these annotations, run build_runner:
+```dart
+@freezed         // Run build_runner
+@riverpod        // Run build_runner
+@JsonSerializable // Run build_runner
+```
+
+After adding/modifying such files, always run:
+```bash
+flutter pub run build_runner build --delete-conflicting-outputs
+```
+
+## Performance Considerations
+
+- **List optimization**: Always use `.builder()` constructors for long lists
+- **Image optimization**: Use WebP format, responsive images
+- **Computation caching**: Memoize expensive calculations
+- **Lazy loading**: Load features on demand
+- **Bundle size**: Keep initial bundle < 2MB
+
+## Getting Help
+
+- **Flutter docs**: https://docs.flutter.dev
+- **Riverpod docs**: https://riverpod.dev
+- **Firebase docs**: https://firebase.google.com/docs/flutter
+- **Guidelines**: See `/guidelines/`
+
+<!-- CUSTOMIZE: Add project-specific sections below -->
+
+## Domain-Specific Features
+
+<!-- Add your project's domain-specific features, calculations, and business logic documentation here -->
