@@ -1,34 +1,81 @@
 # Execute Development Plan
 
-**Description:** Execute the development plan from PLAN.md, automatically updating progress as tasks are completed.
+**Description:** Execute a development plan, automatically updating progress as tasks are completed.
 
 ---
 
-You are executing the development plan defined in `PLAN.md`. As you work through each phase and task, you will **automatically update PLAN.md** to reflect real-time progress.
+You are executing a development plan. As you work through each phase and task, you will **automatically update the plan file** to reflect real-time progress.
+
+## Parameters
+
+This command accepts an optional file path parameter:
+
+```bash
+# Default: Execute PLAN.md
+/execute-plan
+
+# Custom file: Execute a specific plan file
+/execute-plan plans/my-feature.md
+/execute-plan plans/user-authentication.md
+```
+
+**Argument:** `$ARGUMENTS` (optional - defaults to `PLAN.md`)
+
+---
 
 ## Prerequisites
 
-Before starting, verify:
+Before starting, determine the plan file to use:
 
-```bash
-# Check if PLAN.md exists
-Read: PLAN.md
+```markdown
+1. Check if a file path was provided as argument
+2. If provided, use that path (e.g., plans/my-feature.md)
+3. If not provided, default to PLAN.md
+4. Store the path in a variable: PLAN_FILE = [determined path]
 ```
 
-If PLAN.md doesn't exist:
+Then verify the plan file exists:
+
+```bash
+# Check if plan file exists
+Read: [PLAN_FILE]
+```
+
+If the plan file doesn't exist:
 ```markdown
 ❌ **No Plan Found**
 
+The plan file `[PLAN_FILE]` does not exist.
+
+**If you expected PLAN.md:**
 Please create a plan first using `/plan`.
+
+**If you specified a custom path:**
+Check that the file exists at `[PLAN_FILE]`
+
+**Available plan files in this project:**
+[Use Glob to find: plans/*.md, PLAN.md]
 
 The plan-based workflow requires:
 1. Run `/plan` to create development plan
 2. Review and approve the plan
-3. Run `/execute-plan` to begin implementation
+3. Run `/execute-plan` (or `/execute-plan <path>`) to begin implementation
 
 Alternatively, use:
 - `/new-feature` - Traditional workflow (no planning)
 - `/implement` - Streamlined workflow (no planning)
+```
+
+**If plan file exists, confirm with user:**
+```markdown
+📋 **Plan File Found**
+
+**File:** `[PLAN_FILE]`
+**Feature:** [Read feature name from plan]
+**Status:** [Current status from plan]
+**Progress:** [Current progress from plan]
+
+Ready to execute this plan?
 ```
 
 ---
@@ -37,7 +84,7 @@ Alternatively, use:
 
 ### Step 0: Check Git History FIRST
 
-**CRITICAL:** Before reading PLAN.md, ALWAYS check what's actually been done:
+**CRITICAL:** Before reading the plan file, ALWAYS check what's actually been done:
 
 ```bash
 # 1. Check git commits to see completed work
@@ -50,28 +97,28 @@ git log --oneline --all -20
 # Example: lib/features/projections/domain/**/*.dart
 ```
 
-If git shows completed work but PLAN.md is out of sync:
-1. Update PLAN.md to reflect actual progress
+If git shows completed work but the plan file is out of sync:
+1. Update `[PLAN_FILE]` to reflect actual progress
 2. Update phase files (e.g., phase_0_foundation.md) to mark tasks complete
 3. Then continue from correct position
 
 ---
 
-### Step 1: Read and Parse PLAN.md
+### Step 1: Read and Parse Plan File
 
-Read the complete plan to understand:
+Read the complete plan from `[PLAN_FILE]` to understand:
 - Which phases are pending, in progress, or completed
 - Current phase and task being worked on
 - Overall progress status
 - Design decisions and requirements
 
-**Cross-check with git history** - PLAN.md should match reality
+**Cross-check with git history** - the plan file should match reality
 
 ---
 
 ### Step 2: Determine Starting Point
 
-**IMPORTANT:** Before checking PLAN.md status, ALWAYS check git history to see what's actually been completed:
+**IMPORTANT:** Before checking the plan file status, ALWAYS check git history to see what's actually been completed:
 
 ```bash
 # Check recent commits to understand what's been done
@@ -84,8 +131,8 @@ git log --oneline --all -20
 Then check the plan status:
 
 - **If all phases completed:** Plan is done, inform user
-- **If a phase is 🚧 In Progress:** Check git commits to verify actual progress, update PLAN.md if needed
-- **If all phases ⏳ Pending but git shows work done:** Update PLAN.md first, then resume
+- **If a phase is 🚧 In Progress:** Check git commits to verify actual progress, update `[PLAN_FILE]` if needed
+- **If all phases ⏳ Pending but git shows work done:** Update `[PLAN_FILE]` first, then resume
 
 **Resume from last position:**
 ```markdown
@@ -112,10 +159,10 @@ For each phase in order:
 
 #### A. Update Phase Status to "In Progress"
 
-**IMPORTANT:** Before starting any phase, update PLAN.md:
+**IMPORTANT:** Before starting any phase, update the plan file:
 
 ```markdown
-Use the Edit tool to update PLAN.md:
+Use the Edit tool to update [PLAN_FILE]:
 
 Find:
 ### Phase X: [Phase Name]
@@ -143,7 +190,7 @@ For each task in the phase:
 
 **1. Update task status to "In Progress":**
 ```markdown
-Use Edit tool to update in PLAN.md:
+Use Edit tool to update in [PLAN_FILE]:
 
 Find:
 - [ ] Task X.Y: [Task name]
@@ -179,9 +226,9 @@ Use the Task tool:
 - Description: "Phase [X]: [Phase Name]"
 - Subagent: "general-purpose"
 - Prompt: Include the FULL content from .claude/agents/[agent-name].md, then add:
-  "Now execute Phase [X] of the development plan in PLAN.md. Specifically:
+  "Now execute Phase [X] of the development plan in [PLAN_FILE]. Specifically:
 
-  [Copy the exact tasks from PLAN.md for this phase]
+  [Copy the exact tasks from the plan file for this phase]
 
   Follow the deliverables and git commit format specified in the plan. After completing the work, report back with:
   1. What was implemented
@@ -189,16 +236,16 @@ Use the Task tool:
   3. Any issues encountered
   4. Confirmation that git commit was made per plan
 
-  Refer to PLAN.md for complete context and requirements."
+  Refer to [PLAN_FILE] for complete context and requirements."
 ```
 
 **3. Wait for agent to complete**
 
-**4. After agent completes, update PLAN.md:**
+**4. After agent completes, update the plan file:**
 
 **Mark task as completed:**
 ```markdown
-Use Edit tool to update in PLAN.md:
+Use Edit tool to update in [PLAN_FILE]:
 
 Find:
 - [ ] Task X.Y: [Task name]
@@ -216,7 +263,7 @@ Replace:
 After all tasks in phase are done:
 
 ```markdown
-Use Edit tool to update in PLAN.md:
+Use Edit tool to update in [PLAN_FILE]:
 
 Find:
 ### Phase X: [Phase Name]
@@ -394,17 +441,17 @@ When all 11 phases are done:
 
 ## Files Modified
 
-The complete list is in PLAN.md under "Progress Tracking" section.
+The complete list is in `[PLAN_FILE]` under "Progress Tracking" section.
 
 ---
 
-**Plan Status:** You can archive PLAN.md or keep it for reference.
+**Plan Status:** You can archive `[PLAN_FILE]` or keep it for reference.
 **Start New Feature:** Run `/plan` for next feature.
 ```
 
-Update PLAN.md one final time:
+Update the plan file one final time:
 ```markdown
-Use Edit tool to update in PLAN.md:
+Use Edit tool to update in [PLAN_FILE]:
 
 Find:
 **Status:** 🚧 In Progress
@@ -438,32 +485,32 @@ If an agent encounters an error:
 **Current Status:**
 - Phase [X] is still marked as 🚧 In Progress
 - Task [X.Y] failed
-- PLAN.md has been updated to reflect failure
+- `[PLAN_FILE]` has been updated to reflect failure
 
 **Your Options:**
 
 1. **Fix and Resume:**
    - Fix the issue manually or tell me how to fix it
-   - Run `/execute-plan` again to resume
+   - Run `/execute-plan [PLAN_FILE]` again to resume
 
 2. **Skip Task:**
-   - Mark task as completed manually in PLAN.md
-   - Run `/execute-plan` to continue
+   - Mark task as completed manually in `[PLAN_FILE]`
+   - Run `/execute-plan [PLAN_FILE]` to continue
 
 3. **Adjust Plan:**
-   - Edit PLAN.md to change approach
-   - Run `/execute-plan` to continue with new plan
+   - Edit `[PLAN_FILE]` to change approach
+   - Run `/execute-plan [PLAN_FILE]` to continue with new plan
 
 4. **Abort:**
-   - Leave PLAN.md as-is
+   - Leave `[PLAN_FILE]` as-is
    - Start over with `/plan`
 
 What would you like to do?
 ```
 
-Update PLAN.md to show the error:
+Update the plan file to show the error:
 ```markdown
-Use Edit tool to add error note in PLAN.md:
+Use Edit tool to add error note in [PLAN_FILE]:
 
 Find:
 - [ ] Task X.Y: [Task name]
@@ -476,24 +523,24 @@ Replace:
   - Date: [current date]
 ```
 
-### If PLAN.md is Corrupted
+### If Plan File is Corrupted
 
 ```markdown
-❌ **Cannot Parse PLAN.md**
+❌ **Cannot Parse Plan File**
 
-The plan file appears to be corrupted or in an unexpected format.
+The plan file `[PLAN_FILE]` appears to be corrupted or in an unexpected format.
 
 **Options:**
-1. Restore from git history: `git checkout HEAD -- PLAN.md`
+1. Restore from git history: `git checkout HEAD -- [PLAN_FILE]`
 2. Start new plan: `/plan`
-3. Fix manually and try again: Edit PLAN.md then run `/execute-plan`
+3. Fix manually and try again: Edit `[PLAN_FILE]` then run `/execute-plan [PLAN_FILE]`
 ```
 
 ---
 
 ## Real-Time Progress Updates
 
-**CRITICAL:** You MUST update PLAN.md after EVERY significant action:
+**CRITICAL:** You MUST update `[PLAN_FILE]` after EVERY significant action:
 
 ### When starting a phase:
 ```markdown
@@ -523,7 +570,7 @@ Add to phase notes:
 
 ### End-of-Week Git Commits:
 
-**IMPORTANT**: At the end of each development week (typically after completing weekly tasks from PLAN.md), create a git commit to checkpoint progress.
+**IMPORTANT**: At the end of each development week (typically after completing weekly tasks from the plan), create a git commit to checkpoint progress.
 
 **Required steps before committing:**
 1. Run `flutter analyze` - must show "No issues found!"
@@ -553,7 +600,7 @@ EOF
 ```
 
 **After committing:**
-- Update PLAN.md with the commit hash
+- Update `[PLAN_FILE]` with the commit hash
 - Mark the week as completed
 - Continue to next week's tasks
 
@@ -564,26 +611,31 @@ EOF
 The execution is designed to be pausable and resumable:
 
 - **User can stop at any time** (Ctrl+C)
-- **Running `/execute-plan` again** resumes from last 🚧 In Progress phase
-- **PLAN.md serves as state** - no need to remember where you left off
-- **All progress is preserved** in PLAN.md
+- **Running `/execute-plan` (or `/execute-plan [path]`) again** resumes from last 🚧 In Progress phase
+- **The plan file serves as state** - no need to remember where you left off
+- **All progress is preserved** in the plan file
 
 ---
 
 ## Usage
 
 ```bash
-# Start executing the plan
+# Execute the default plan (PLAN.md)
 /execute-plan
+
+# Execute a specific plan file
+/execute-plan plans/user-authentication.md
+/execute-plan plans/dashboard-feature.md
 
 # If interrupted, resume with same command
-/execute-plan
+/execute-plan                              # resumes PLAN.md
+/execute-plan plans/my-feature.md          # resumes specific plan
 
 # The command will:
-# 1. Read PLAN.md
+# 1. Read the plan file (PLAN.md or specified path)
 # 2. Find where it left off
 # 3. Continue from there
-# 4. Update PLAN.md in real-time
+# 4. Update the plan file in real-time
 # 5. Complete all 11 phases
 # 6. Create PR at the end
 ```
@@ -593,8 +645,8 @@ The execution is designed to be pausable and resumable:
 ## Important Notes
 
 ### DO:
-- ✅ Read PLAN.md first to understand the plan
-- ✅ Update PLAN.md after every task/phase change
+- ✅ Read the plan file first to understand the plan
+- ✅ Update the plan file after every task/phase change
 - ✅ Launch appropriate agents for each phase
 - ✅ Follow git commit format from plan exactly
 - ✅ Track progress with percentages
@@ -602,7 +654,7 @@ The execution is designed to be pausable and resumable:
 - ✅ Pause at checkpoints if needed
 
 ### DON'T:
-- ❌ Skip updating PLAN.md (always keep it current)
+- ❌ Skip updating the plan file (always keep it current)
 - ❌ Make up tasks not in the plan
 - ❌ Change plan without user approval
 - ❌ Continue if agent reports failure
@@ -610,4 +662,4 @@ The execution is designed to be pausable and resumable:
 
 ---
 
-This command provides **systematic, trackable execution** of your development plan with real-time progress visibility in PLAN.md.
+This command provides **systematic, trackable execution** of your development plan with real-time progress visibility in the plan file.
