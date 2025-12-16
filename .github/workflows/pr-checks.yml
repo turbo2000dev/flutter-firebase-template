@@ -96,7 +96,7 @@ jobs:
       - name: Check for breaking changes
         run: |
           # Check if any breaking change patterns exist in commit messages
-          if git log origin/main..HEAD --oneline | grep -iE "breaking|major|!:"; then
+          if git log origin/dev..HEAD --oneline | grep -iE "breaking|major|!:"; then
             echo "⚠️ Potential breaking changes detected"
             echo "Please ensure CHANGELOG.md is updated"
           else
@@ -105,7 +105,7 @@ jobs:
 
       - name: Check for migration files
         run: |
-          if git diff --name-only origin/main...HEAD | grep -E "migration|schema"; then
+          if git diff --name-only origin/dev...HEAD | grep -E "migration|schema"; then
             echo "⚠️ Database schema changes detected"
             echo "Ensure migration documentation is complete"
           else

@@ -147,11 +147,24 @@ python3 scripts/coverage-report.py --ci # Fails if below 80%
 | devops | CI/CD and deployment |
 
 ### Commands (`.claude/commands/`)
+
+**Workflow Commands (Development Cycle):**
+- `/start-dev` - Start new feature development in a weekly branch (from `dev`)
+- `/commit` - Commit changes with proper conventional commit message
+- `/start-pr` - Run quality checks, create PR, and merge to `dev`
+- `/promote` - Promote code to staging, main, or production
+
+**Planning & Implementation:**
 - `/plan` - Create development plan
 - `/execute-plan` - Execute plan from PLAN.md
 - `/implement` - Implement a feature
+- `/new-feature` - Full feature development workflow
+
+**Build & Deploy:**
 - `/deploy` - Deploy to environment
 - `/build-all` - Build all components
+
+**Quality Assurance:**
 - `/code-review` - Review code quality
 - `/security-audit` - Security analysis
 - `/test-audit` - Test coverage audit
@@ -169,14 +182,30 @@ python3 scripts/coverage-report.py --ci # Fails if below 80%
 
 ## Environments
 
-| Environment | Branch | Auto-Deploy |
-|-------------|--------|-------------|
-| Development | `develop` | Yes |
-| Staging | `staging` | Yes |
-| Production | `main` | Manual |
+| Environment | Branch | Auto-Deploy | Promotion Command |
+|-------------|--------|-------------|-------------------|
+| Development | `dev` | Yes (on push) | N/A (merge via PR) |
+| Staging | `staging` | Yes (on push) | `/promote staging` |
+| Stable | `main` | No | `/promote main` |
+| Production | N/A | Manual trigger | `/promote prod` |
 
 ## Git Workflow
 
+### Branch Flow
+```
+dev/YYYY-WW-* (feature) → dev (integration) → staging (UAT)
+                                            → main (stable) → prod (production)
+```
+
+### Development Cycle
+1. `/start-dev <description>` - Create `dev/YYYY-WW-<description>` branch from `dev`
+2. Develop, commit, push daily
+3. `/start-pr` - Run checks, create PR to `dev`, merge
+4. `/promote staging` - Deploy to staging for UAT
+5. `/promote main` - Merge to stable (no deployment)
+6. `/promote prod` - Deploy to production
+
+### Hooks
 - **Pre-commit:** Auto-format, lint, run affected tests
 - **Pre-push:** Full test suite, coverage check
 - **Commit messages:** Conventional commits (`feat:`, `fix:`, `docs:`, etc.)

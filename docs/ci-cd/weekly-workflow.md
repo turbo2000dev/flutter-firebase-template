@@ -11,40 +11,45 @@ This document defines the weekly development workflow for the {{project_type}} p
 Each development week follows this pattern:
 
 ```
-Monday          → Create weekly branch from main
+Monday          → Create weekly branch from dev (/start-dev)
 Monday-Thursday → Development work with daily commits
 Friday          → Testing, cleanup, and weekly checkpoint commit
-Friday EOD      → Create PR and merge to main (if tests pass)
+Friday EOD      → Create PR and merge to dev (/start-pr)
+After merge     → Promote to staging/main/prod as needed (/promote)
 ```
 
 ## Git Workflow
 
 ### 1. Start of Week (Monday)
 
-**Create a new weekly branch from main:**
+**Create a new weekly branch from dev:**
 
 ```bash
-# Update main branch
-git checkout main
-git pull origin main
+# Recommended: Use the /start-dev command
+/start-dev tax-calculator
 
-# Create weekly branch (format: week/YYYY-WW-description)
-git checkout -b week/2024-45-tax-calculator
+# Or manually:
+# Update dev branch
+git checkout dev
+git pull origin dev
+
+# Create weekly branch (format: dev/YYYY-WW-description)
+git checkout -b dev/2024-45-tax-calculator
 
 # Push branch to remote
-git push -u origin week/2024-45-tax-calculator
+git push -u origin dev/2024-45-tax-calculator
 ```
 
 **Branch Naming Convention:**
 ```
-week/<year>-<week-number>-<brief-description>
+dev/<year>-<week-number>-<brief-description>
 ```
 
 **Examples:**
 ```
-week/2024-45-tax-calculator
-week/2024-46-asset-management
-week/2024-47-scenario-comparison
+dev/2024-45-tax-calculator
+dev/2024-46-asset-management
+dev/2024-47-scenario-comparison
 ```
 
 ### 2. During the Week (Monday-Thursday)
@@ -67,7 +72,7 @@ git commit -m "feat(scope): description
 Co-Authored-By: Claude <noreply@anthropic.com>"
 
 # Push to remote daily
-git push origin week/2024-45-tax-calculator
+git push origin dev/2024-45-tax-calculator
 ```
 
 **Commit Frequency:**
@@ -168,11 +173,15 @@ EOF
 **Step 3: Push and Create Pull Request**
 
 ```bash
-# Push final commit
-git push origin week/2024-45-tax-calculator
+# Recommended: Use the /start-pr command
+/start-pr
 
-# Create PR using GitHub CLI or web interface
-gh pr create --title "Week 45: Tax Calculator Implementation" \
+# Or manually:
+# Push final commit
+git push origin dev/2024-45-tax-calculator
+
+# Create PR to dev using GitHub CLI
+gh pr create --base dev --title "Week 45: Tax Calculator Implementation" \
   --body "$(cat <<'EOF'
 ## Summary
 Implementation of {{TARGET_REGION}}-specific tax calculator for {{project_type}} projections.
@@ -202,7 +211,7 @@ EOF
 )"
 ```
 
-**Step 4: Merge to Main (after CI/CD passes)**
+**Step 4: Merge to Dev (after CI/CD passes)**
 
 Once all CI/CD checks pass:
 
@@ -212,12 +221,27 @@ Once all CI/CD checks pass:
 4. Delete the weekly branch after merge
 
 ```bash
-# After merge on GitHub, update local main
-git checkout main
-git pull origin main
+# After merge on GitHub, update local dev
+git checkout dev
+git pull origin dev
 
 # Delete local weekly branch
-git branch -d week/2024-45-tax-calculator
+git branch -d dev/2024-45-tax-calculator
+```
+
+**Step 5: Promote to Other Environments**
+
+After merging to dev, promote as needed:
+
+```bash
+# Deploy to staging for UAT testing
+/promote staging
+
+# After UAT approval, merge to stable main
+/promote main
+
+# Deploy to production
+/promote prod
 ```
 
 ## Handling Incomplete Work
@@ -263,7 +287,7 @@ This feature spanned two weeks due to complexity...
 
 ### If Critical Bug Found
 
-If a critical bug is found in main that needs immediate fix:
+If a critical bug is found in production that needs immediate fix:
 
 ```bash
 # Create hotfix branch from main
@@ -281,12 +305,21 @@ Critical bug in tax bracket calculation causing incorrect results.
 
 Fixes #123"
 
-# Create PR immediately
+# Create PR to main immediately
 gh pr create --title "HOTFIX: Tax Calculation Error" --base main
 
-# After merge, pull into your weekly branch
-git checkout week/2024-45-tax-calculator
-git pull origin main
+# After merge to main, deploy to production
+/promote prod
+
+# Also merge the fix to dev to keep branches in sync
+git checkout dev
+git pull origin dev
+git merge main
+git push origin dev
+
+# Pull into your weekly branch if still active
+git checkout dev/2024-45-tax-calculator
+git merge dev
 ```
 
 ## Integration with PLAN.md
@@ -344,13 +377,22 @@ Every push to a weekly branch triggers:
 
 ### PR Checks Before Merge
 
-Before merging to main, the PR must pass:
+Before merging to dev, the PR must pass:
 
 - ✅ All tests passing
 - ✅ Coverage ≥80% overall
 - ✅ No security vulnerabilities
 - ✅ Successful builds (web, Android, iOS)
-- ✅ No merge conflicts with main
+- ✅ No merge conflicts with dev
+
+### Deployment Triggers
+
+| Branch Push | Action |
+|-------------|--------|
+| `dev` | Auto-deploy to dev environment |
+| `staging` | Auto-deploy to staging environment (UAT) |
+| `main` | Triggers beta deployment (iOS/Android) |
+| Manual trigger | Production deployment |
 
 See `docs/ci-cd/secrets-setup.md` for CI/CD configuration details.
 
@@ -358,31 +400,36 @@ See `docs/ci-cd/secrets-setup.md` for CI/CD configuration details.
 
 ### ✅ Do:
 
-- **Start fresh each week** - New branch from main every Monday
+- **Start fresh each week** - New branch from `dev` every Monday (`/start-dev`)
 - **Commit daily** - Push progress daily to avoid losing work
 - **Run tests frequently** - Don't wait until Friday
 - **Keep branches focused** - One major feature per week
 - **Document progress** - Update PLAN.md with status
 - **Clean up** - Delete branches after merge
+- **Use promotion flow** - Always promote through environments (`/promote`)
 
 ### ❌ Don't:
 
-- **Don't work directly on main** - Always use weekly branches
+- **Don't work directly on `dev`, `main`, or `staging`** - Always use feature branches
 - **Don't skip quality checks** - Run analyze/test before merging
 - **Don't merge broken code** - All tests must pass
 - **Don't let branches linger** - Merge by end of week
 - **Don't forget attribution** - Include Claude Code co-author
 - **Don't ignore CI/CD failures** - Fix before merging
+- **Don't skip the promotion flow** - Always go through `dev` first
 
 ## Example Full Week Workflow
 
 ```bash
 # === MONDAY ===
-# Start new week
-git checkout main
-git pull origin main
-git checkout -b week/2024-45-tax-calculator
-git push -u origin week/2024-45-tax-calculator
+# Start new week using /start-dev command
+/start-dev tax-calculator
+
+# Or manually:
+git checkout dev
+git pull origin dev
+git checkout -b dev/2024-45-tax-calculator
+git push -u origin dev/2024-45-tax-calculator
 
 # === MONDAY-THURSDAY ===
 # Daily development cycle
@@ -404,17 +451,32 @@ git commit -m "Week 45: Tax Calculator Implementation
 ..."
 git push
 
-# Create PR
-gh pr create --title "Week 45: Tax Calculator Implementation" --base main
+# Create PR to dev using /start-pr command
+/start-pr
+
+# Or manually:
+gh pr create --title "Week 45: Tax Calculator Implementation" --base dev
 
 # === FRIDAY AFTERNOON ===
 # After CI/CD passes and PR approved
 # Merge on GitHub (squash and merge)
 
 # Update local
-git checkout main
-git pull origin main
-git branch -d week/2024-45-tax-calculator
+git checkout dev
+git pull origin dev
+git branch -d dev/2024-45-tax-calculator
+
+# === AFTER MERGE ===
+# Promote to other environments as needed
+
+# Deploy to staging for UAT testing
+/promote staging
+
+# After UAT approval, merge to stable main
+/promote main
+
+# Deploy to production
+/promote prod
 
 # Ready for next week!
 ```
@@ -433,19 +495,19 @@ git commit -m "build: update generated files"
 git push
 ```
 
-### "Merge conflicts with main"
+### "Merge conflicts with dev"
 
 ```bash
-# Update your branch with latest main
-git checkout week/2024-45-tax-calculator
+# Update your branch with latest dev
+git checkout dev/2024-45-tax-calculator
 git fetch origin
-git merge origin/main
+git merge origin/dev
 
 # Resolve conflicts
 # ... edit files ...
 
 git add .
-git commit -m "merge: resolve conflicts with main"
+git commit -m "merge: resolve conflicts with dev"
 git push
 ```
 
