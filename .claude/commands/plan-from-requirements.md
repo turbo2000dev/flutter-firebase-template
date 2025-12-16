@@ -486,16 +486,35 @@ If user requests adjustments:
 
 ## Step 9: Ask Where to Save the Plan
 
-After user approves the plan content, ask where to save it using AskUserQuestion:
+After user approves the plan content, **first check if PLAN.md already exists**:
+
+```bash
+# Check if PLAN.md exists
+ls -la PLAN.md
+```
+
+**If PLAN.md DOES exist**, ask where to save using AskUserQuestion with "Add to existing" as the recommended option:
+
+```
+Question: "PLAN.md already exists. Where should I save this development plan?"
+Header: "Plan file"
+Options:
+- Label: "Add to existing PLAN.md (Recommended)"
+  Description: "Append this plan to the existing PLAN.md file - keeps all plans together"
+- Label: "Replace PLAN.md"
+  Description: "Overwrite the existing PLAN.md with this new plan"
+- Label: "Separate file with custom name"
+  Description: "Create a new file like plans/feature-name.md - useful for archiving or parallel plans"
+```
+
+**If PLAN.md does NOT exist**, ask with "Create PLAN.md" as the recommended option:
 
 ```
 Question: "Where should I save this development plan?"
 Header: "Plan file"
 Options:
 - Label: "PLAN.md (Recommended)"
-  Description: "Create or replace PLAN.md - standard location for /execute-plan command"
-- Label: "Add to existing PLAN.md"
-  Description: "Append this plan to the existing PLAN.md file (useful for multi-feature planning)"
+  Description: "Create PLAN.md - standard location for /execute-plan command"
 - Label: "Separate file with custom name"
   Description: "Create a new file like plans/feature-name.md - useful for archiving or parallel plans"
 ```
@@ -517,16 +536,25 @@ Example suggestions based on feature:
 
 After approval and file location selection:
 
-**Option A: PLAN.md (new/replace)**
+**Option A: PLAN.md (new)** - When PLAN.md doesn't exist
 ```markdown
-Use the Write tool to create/overwrite PLAN.md with the complete plan.
+Use the Write tool to create PLAN.md with the complete plan.
 
 Include at the top:
 **Requirements Source:** [file_path]
 **Requirements Last Modified:** [file modification date]
 ```
 
-**Option B: Add to existing PLAN.md**
+**Option B: Replace PLAN.md** - When user chooses to replace existing
+```markdown
+Use the Write tool to overwrite PLAN.md with the complete plan.
+
+Include at the top:
+**Requirements Source:** [file_path]
+**Requirements Last Modified:** [file modification date]
+```
+
+**Option C: Add to existing PLAN.md** - When user chooses to append (RECOMMENDED when PLAN.md exists)
 ```markdown
 1. Read existing PLAN.md
 2. Add a separator and the new plan:
@@ -541,7 +569,7 @@ Include at the top:
 3. Write the combined content back to PLAN.md
 ```
 
-**Option C: Separate file**
+**Option D: Separate file**
 ```markdown
 1. Create the plans/ directory if it doesn't exist
 2. Write the plan to the specified path (e.g., plans/feature-name.md)
