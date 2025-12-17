@@ -1,6 +1,6 @@
 # Promote
 
-**Description:** Promote code between environments: dev → main (stable), dev → staging (UAT), or main → prod (production deployment).
+**Description:** Promote code between environments: dev → main (production) or dev → staging (UAT).
 
 ---
 
@@ -11,16 +11,14 @@
 ```
 
 **Arguments:**
-- `target` - Required. Target environment: `main`, `staging`, or `prod`
-  - `main` - Merge dev → main (no deployment, stable release branch)
+- `target` - Required. Target environment: `main` or `staging`
+  - `main` - Merge dev → main (auto-deploys to production)
   - `staging` - Merge dev → staging (auto-deploys to staging for UAT)
-  - `prod` - Deploy main → production (triggers production deployment)
 
 **Examples:**
 ```bash
-/promote main         # Merge dev → main (stable release)
+/promote main         # Merge dev → main (deploys to production)
 /promote staging      # Merge dev → staging (UAT testing)
-/promote prod         # Deploy main → production
 ```
 
 ---
@@ -43,27 +41,20 @@
 │        ├────────────────────────────────────────────┐               │
 │        │                                            │               │
 │        │ /promote main                              │ /promote      │
-│        │ (no deployment)                            │ staging       │
+│        │ (auto-deploys to production)               │ staging       │
 │        ▼                                            ▼               │
 │   ┌─────────┐                                  ┌─────────┐          │
-│   │  main   │ ←── Stable/Release-Ready         │ staging │ ←── UAT │
-│   └────┬────┘                                  └─────────┘          │
-│        │                                                            │
-│        │ /promote prod                                              │
-│        │ (triggers deployment)                                      │
-│        ▼                                                            │
-│   ┌─────────┐                                                       │
-│   │  prod   │ ←── Production                                        │
-│   └─────────┘                                                       │
+│   │  main   │ ←── Production                   │ staging │ ←── UAT │
+│   └─────────┘                                  └─────────┘          │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 **Key Points:**
 - `dev` is the integration branch where all features merge
-- `main` is stable/release-ready code (no auto-deployment)
+- `main` auto-deploys to production on push
 - `staging` gets code directly from `dev` for UAT testing
-- `prod` deployment requires code to be in `main` first
+- Single deployment step: `/promote main` deploys to production
 
 ---
 
@@ -81,9 +72,8 @@ echo "Current branch: $CURRENT_BRANCH"
 
 | Target | Source Branch | Action | Deployment |
 |--------|---------------|--------|------------|
-| `main` | `dev` | Merge dev → main | None |
+| `main` | `dev` | Merge dev → main | Auto-deploy to production |
 | `staging` | `dev` | Merge dev → staging | Auto-deploy to staging |
-| `prod` | `main` | Deploy from main | Trigger prod deployment |
 
 #### If on Feature Branch (dev/*, feature/*, fix/*, etc.)
 
@@ -112,12 +102,12 @@ This will:
 
 ### Phase 2: Execute Promotion Based on Target
 
-#### Promoting to Main (`/promote main`)
+#### Promoting to Main / Production (`/promote main`)
 
-**Purpose:** Merge integrated code from dev to the stable main branch. No deployment triggered.
+**Purpose:** Merge integrated code from dev to main and auto-deploy to production.
 
 ```bash
-echo "Promoting dev → main..."
+echo "Promoting dev → main (production)..."
 
 # Ensure we're on dev and it's up to date
 git checkout dev
@@ -128,7 +118,7 @@ git checkout main
 git pull origin main
 git merge dev --no-edit
 
-# Push (no deployment triggered)
+# Push (triggers production deployment via CI)
 git push origin main
 
 # Return to dev
@@ -137,19 +127,30 @@ git checkout dev
 
 **Post-promotion message:**
 ```markdown
-## Promoted to Main
+## Deployed to Production
 
 **Merge:** `dev` → `main`
 **Commit:** `<commit-hash>`
+**URL:** {{PROD_URL}}
 
-✅ Code is now in stable main branch
-❌ No deployment triggered (main branch does not auto-deploy)
+✅ Production deployment triggered automatically
+
+### Verification Checklist
+- [ ] Deployment workflow completed successfully
+- [ ] Landing page loads correctly
+- [ ] Flutter app loads at /app
+- [ ] Authentication works
+- [ ] Core features functional
+- [ ] Performance acceptable
+
+### Rollback (if needed)
+```bash
+firebase hosting:rollback
+```
 
 ### Next Steps
-
-- **Deploy to production:** `/promote prod`
-- **Test on staging first:** `/promote staging`
 - **Continue development:** `/start-dev`
+- **Test on staging first (next time):** `/promote staging`
 ```
 
 #### Promoting to Staging (`/promote staging`)
@@ -194,78 +195,12 @@ git checkout dev
 
 ### Next Steps (after UAT approval)
 
-1. **Merge to stable main:** `/promote main`
-2. **Deploy to production:** `/promote prod`
-```
-
-#### Promoting to Production (`/promote prod`)
-
-**Purpose:** Deploy stable code from main to production.
-
-**Pre-requisites:**
-- Code must be in `main` branch
-- CI must have passed on main (verified automatically)
-
-```bash
-echo "Deploying main → production..."
-
-# Ensure main is up to date
-git checkout main
-git pull origin main
-
-# Verify CI passed on main (trust CI as source of truth)
-echo "Verifying CI status on main..."
-CI_STATUS=$(gh run list --branch main --limit 1 --json conclusion --jq '.[0].conclusion')
-if [ "$CI_STATUS" != "success" ]; then
-    echo "ERROR: CI has not passed on main branch."
-    echo "Latest CI status: $CI_STATUS"
-    echo "Please ensure CI passes before deploying to production."
-    exit 1
-fi
-echo "✅ CI passed on main"
-
-# Trigger production deployment
-gh workflow run deploy-prod.yml
-
-# Or if using a prod branch:
-# git checkout prod 2>/dev/null || git checkout -b prod
-# git merge main --no-edit
-# git push origin prod
-```
-
-**Note:** Tests are NOT run locally. CI is the single source of truth.
-The deploy-prod.yml workflow will skip tests if CI already passed.
-
-**Post-promotion message:**
-```markdown
-## Production Deployment Triggered
-
-**Source:** `main`
-**Commit:** `<commit-hash>`
-**URL:** {{PROD_URL}}
-
-⚠️ Production deployment in progress...
-
-### Verification Checklist
-- [ ] Deployment workflow completed successfully
-- [ ] Landing page loads correctly
-- [ ] Flutter app loads at /app
-- [ ] Authentication works
-- [ ] Core features functional
-- [ ] Performance acceptable
-- [ ] Monitoring/analytics active
-
-### Rollback (if needed)
-```bash
-firebase hosting:rollback
-```
+- **Deploy to production:** `/promote main`
 ```
 
 ---
 
 ### Phase 3: Pre-Promotion Checks
-
-#### For `/promote main` and `/promote staging`
 
 Validation is recommended but not required:
 
@@ -280,62 +215,6 @@ fi
 git fetch origin
 ```
 
-#### For `/promote prod` (CI Status Verification)
-
-```bash
-echo "Verifying CI status on main..."
-
-# Check that CI passed on main branch (trust CI as source of truth)
-CI_STATUS=$(gh run list --branch main --limit 1 --json conclusion --jq '.[0].conclusion')
-if [ "$CI_STATUS" != "success" ]; then
-    echo "FAILED: CI has not passed on main branch."
-    echo "Latest CI status: $CI_STATUS"
-    echo ""
-    echo "Options:"
-    echo "  1. Wait for CI to complete and pass"
-    echo "  2. Fix failing tests and push to main"
-    echo "  3. Use URGENT prefix to bypass (not recommended)"
-    exit 1
-fi
-
-echo "✅ CI passed - safe to deploy to production"
-```
-
-**Why no local tests?**
-- CI already ran tests when code was merged to main
-- Running tests again locally wastes ~2-5 minutes
-- CI results are authoritative and consistent
-- deploy-prod.yml will skip its test job if CI passed
-
----
-
-### Phase 4: Production Confirmation
-
-Before deploying to production, require explicit confirmation:
-
-```markdown
-## Production Deployment Confirmation
-
-You are about to deploy to **PRODUCTION**.
-
-**Source branch:** `main`
-**Target:** Production environment
-
-**Changes since last production deployment:**
-- <commit summary 1>
-- <commit summary 2>
-- <commit summary 3>
-
-**This will affect live users immediately.**
-
-Are you sure you want to proceed?
-```
-
-**Options:**
-- **Yes, deploy to production** - Proceed with deployment
-- **No, cancel** - Abort the promotion
-- **Test on staging first** - Redirect to `/promote staging`
-
 ---
 
 ## Environment Configuration
@@ -345,25 +224,23 @@ Are you sure you want to proceed?
 | Branch | Purpose | Auto-Deploy |
 |--------|---------|-------------|
 | `dev` | Integration branch | No |
-| `main` | Stable/release-ready | No |
+| `main` | Production | Yes (on push) |
 | `staging` | UAT testing | Yes (on push) |
-| `prod` | Production | Manual trigger |
 
 ### CI/CD Triggers
 
 ```yaml
 # Workflows triggered by promotions:
 
-# /promote main → No workflow (just git merge)
+# /promote main → ci.yml (tests + production deployment)
+on:
+  push:
+    branches: [main]
 
 # /promote staging → deploy-staging.yml
 on:
   push:
     branches: [staging]
-
-# /promote prod → deploy-prod.yml
-on:
-  workflow_dispatch  # Manual trigger required
 ```
 
 ---
@@ -390,8 +267,9 @@ echo "1. GitHub Actions logs"
 echo "2. Firebase Console"
 echo "3. Service account permissions"
 
-# Retry deployment
-gh workflow run deploy-prod.yml
+# Retry by re-pushing to main (will trigger CI again)
+git commit --allow-empty -m "chore: retry deployment"
+git push origin main
 ```
 
 ### Rollback
@@ -403,7 +281,7 @@ firebase hosting:rollback --site {{FIREBASE_PROJECT_ID}}
 # Or revert and redeploy
 git revert HEAD
 git push origin main
-/promote prod
+# CI will automatically deploy the reverted state
 ```
 
 ---
@@ -412,12 +290,11 @@ git push origin main
 
 ### Production Deployment Guards
 
-Before deploying to production:
+Production deployment is automatic when pushing to main. Safety is ensured by:
 
-1. **Require confirmation** - Explicit user approval
-2. **Run full validation** - Tests and analysis must pass
-3. **Check branch state** - main must be clean and up-to-date
-4. **Recommend staging test** - Warn if staging wasn't tested
+1. **CI tests must pass** - Deployment only runs if tests succeed
+2. **Code must be in main** - Only the main branch deploys to production
+3. **Recommend staging test** - Test on staging first with `/promote staging`
 
 ### Staging Validation
 
@@ -441,14 +318,11 @@ Before promoting to staging:
 # 3. Create PR and merge to dev
 /start-pr
 
-# 4. Deploy to staging for UAT
+# 4. (Optional) Deploy to staging for UAT
 /promote staging
 
-# 5. After UAT approval, merge to stable main
+# 5. After UAT approval, deploy to production
 /promote main
-
-# 6. Deploy to production
-/promote prod
 ```
 
 ---

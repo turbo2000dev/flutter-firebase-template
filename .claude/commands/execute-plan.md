@@ -8,30 +8,52 @@ You are executing a development plan. As you work through each phase and task, y
 
 ## Parameters
 
-This command accepts an optional file path parameter:
+This command accepts optional section name and/or file path parameters:
 
 ```bash
-# Default: Execute PLAN.md
+# Execute next pending section in PLAN.md
 /execute-plan
 
-# Custom file: Execute a specific plan file
+# Execute a specific section from PLAN.md
+/execute-plan authentication
+/execute-plan user-profile
+
+# Execute next pending section from a specific plan file
 /execute-plan plans/my-feature.md
-/execute-plan plans/user-authentication.md
+
+# Execute a specific section from a specific file
+/execute-plan authentication plans/my-feature.md
 ```
 
-**Argument:** `$ARGUMENTS` (optional - defaults to `PLAN.md`)
+**Arguments:** `$ARGUMENTS` (optional - `[section-name] [file-path]`)
+
+**Parsing Rules:**
+1. If argument ends with `.md` → it's a file path
+2. If argument doesn't end with `.md` → it's a section name
+3. Can have both: section name first, then file path
+4. If no section specified: automatically select the next pending section
+
+**Execution Behavior:**
+- **Always executes ONE section at a time** (never all sections at once)
+- If section name provided: execute that specific section
+- If no section name: find the first section with status ⏳ Pending or 🚧 In Progress and execute it
+- Other sections remain unchanged
+- Progress tracking shows section-specific progress
 
 ---
 
 ## Prerequisites
 
-Before starting, determine the plan file to use:
+Before starting, parse the arguments and determine what to execute:
 
 ```markdown
-1. Check if a file path was provided as argument
-2. If provided, use that path (e.g., plans/my-feature.md)
-3. If not provided, default to PLAN.md
-4. Store the path in a variable: PLAN_FILE = [determined path]
+1. Parse $ARGUMENTS to extract:
+   - SECTION_NAME: argument that doesn't end with .md (or null if not provided)
+   - PLAN_FILE: argument that ends with .md (or PLAN.md if not provided)
+
+2. Store the parsed values:
+   - PLAN_FILE = [determined path, default: PLAN.md]
+   - SECTION_NAME = [determined section, or null for all sections]
 ```
 
 Then verify the plan file exists:
@@ -66,16 +88,84 @@ Alternatively, use:
 - `/implement` - Streamlined workflow (no planning)
 ```
 
-**If plan file exists, confirm with user:**
+**If plan file exists, check for sections and confirm with user:**
+
+If SECTION_NAME is provided, validate it exists in the plan:
 ```markdown
-📋 **Plan File Found**
+# Look for the section in the Sections table or phase tags
+# If section not found, show error with available sections
+```
+
+If section not found:
+```markdown
+❌ **Section Not Found**
+
+The section `[SECTION_NAME]` was not found in `[PLAN_FILE]`.
+
+**Available sections in this plan:**
+| Section | Description | Status |
+|---------|-------------|--------|
+| `section-1` | ... | ... |
+| `section-2` | ... | ... |
+
+**Usage:**
+- `/execute-plan` - Execute all sections
+- `/execute-plan section-1` - Execute specific section
+```
+
+**If no SECTION_NAME provided, auto-select the next section:**
+```markdown
+1. Read the Sections table from the plan file
+2. Find the first section with status 🚧 In Progress (resume it)
+3. If none in progress, find the first section with status ⏳ Pending
+4. If all sections are ✅ Completed, inform user the plan is complete
+5. Set SECTION_NAME to the auto-selected section
+```
+
+If all sections are complete:
+```markdown
+✅ **Plan Already Complete**
+
+All sections in `[PLAN_FILE]` have been completed.
+
+| Section | Status | Progress |
+|---------|--------|----------|
+| `authentication` | ✅ Completed | 100% |
+| `user-profile` | ✅ Completed | 100% |
+| `settings` | ✅ Completed | 100% |
+
+**Overall Progress:** 100%
+
+**Next Steps:**
+- Create PR: `/start-pr`
+- Start a new plan: `/plan`
+```
+
+**If valid section found (explicit or auto-selected), confirm with user:**
+```markdown
+📋 **Plan Ready for Execution**
 
 **File:** `[PLAN_FILE]`
 **Feature:** [Read feature name from plan]
-**Status:** [Current status from plan]
-**Progress:** [Current progress from plan]
+**Overall Progress:** [Current progress from plan]
 
-Ready to execute this plan?
+**Executing Section:**
+🎯 **Section:** `[SECTION_NAME]`
+[If auto-selected:] _(auto-selected as next pending section)_
+
+**Section Details:**
+- Status: [Section status]
+- Progress: [Section progress]%
+- Phases: [X] phases in this section
+
+**All Sections:**
+| Section | Status | Progress |
+|---------|--------|----------|
+| `authentication` | ✅ Completed | 100% |
+| `user-profile` | 🎯 **Executing** | 0% | ← Current
+| `settings` | ⏳ Pending | 0% |
+
+Ready to execute section `[SECTION_NAME]`?
 ```
 
 ---
@@ -111,6 +201,12 @@ Read the complete plan from `[PLAN_FILE]` to understand:
 - Current phase and task being worked on
 - Overall progress status
 - Design decisions and requirements
+- **Section assignments for each phase/task**
+
+**If SECTION_NAME is provided:**
+- Filter phases/tasks to only those tagged with `Section: SECTION_NAME`
+- Track section-specific progress separately
+- Skip phases/tasks from other sections
 
 **Cross-check with git history** - the plan file should match reality
 
@@ -155,7 +251,20 @@ Continuing from where we left off...
 
 ### Step 3: Execute Phase by Phase
 
-For each phase in order:
+**Section Execution Logic:**
+
+Every execution targets exactly ONE section (either explicit or auto-selected):
+
+```markdown
+SECTION_NAME is always set (either provided or auto-selected):
+  - Only execute phases where **Section:** matches SECTION_NAME
+  - Only execute tasks where Section: matches SECTION_NAME
+  - Skip phases/tasks from other sections (leave them as ⏳ Pending)
+  - Update section-specific progress in the Sections table
+  - Update overall plan progress after section completes
+```
+
+For each phase in order (respecting section filter):
 
 #### A. Update Phase Status to "In Progress"
 
@@ -385,16 +494,55 @@ Please respond, or I'll automatically continue in 5 seconds...
 
 ### Step 5: Complete Execution
 
-When all 11 phases are done:
+When all phases in the section are done:
 
+**Section completed (more sections remain):**
+```markdown
+🎉 **Section Completed Successfully!**
+
+**Plan:** [Feature Name]
+**Section:** `[SECTION_NAME]`
+**Section Status:** ✅ 100% Complete
+**Duration:** [Actual time taken]
+
+## Section Summary
+
+**Phases Completed:** [X]/[X] (for this section)
+
+## Overall Plan Status
+
+| Section | Status | Progress |
+|---------|--------|----------|
+| `authentication` | ✅ Completed | 100% |
+| `user-profile` | ⏳ Pending | 0% |
+| `settings` | ⏳ Pending | 0% |
+
+**Overall Progress:** [X]%
+
+## Next Steps
+
+1. Execute next section: `/execute-plan` (will auto-select `user-profile`)
+2. Execute specific section: `/execute-plan settings`
+3. Create PR when all sections complete: `/start-pr`
+```
+
+**Section completed (was the last section - plan complete):**
 ```markdown
 🎉 **Development Plan Completed Successfully!**
 
 **Plan:** [Feature Name]
+**Final Section:** `[SECTION_NAME]`
 **Status:** ✅ 100% Complete
 **Duration:** [Actual time taken]
 
 ## Summary
+
+**All Sections Completed:**
+| Section | Status | Progress |
+|---------|--------|----------|
+| `authentication` | ✅ Completed | 100% |
+| `user-profile` | ✅ Completed | 100% |
+| `settings` | ✅ Completed | 100% |
 
 **Phases Completed:** 11/11
 - ✅ Phase 1: Architecture & Specification
@@ -620,24 +768,49 @@ The execution is designed to be pausable and resumable:
 ## Usage
 
 ```bash
-# Execute the default plan (PLAN.md)
+# Execute next pending section in PLAN.md (auto-selects)
 /execute-plan
 
-# Execute a specific plan file
+# Execute a specific section from PLAN.md
+/execute-plan authentication
+/execute-plan user-profile
+/execute-plan payment-integration
+
+# Execute next pending section from a specific plan file
 /execute-plan plans/user-authentication.md
 /execute-plan plans/dashboard-feature.md
 
+# Execute a specific section from a specific file
+/execute-plan authentication plans/my-feature.md
+/execute-plan core-features plans/complete-app.md
+
 # If interrupted, resume with same command
-/execute-plan                              # resumes PLAN.md
-/execute-plan plans/my-feature.md          # resumes specific plan
+/execute-plan                              # resumes current section (or starts next pending)
+/execute-plan authentication               # resumes authentication section specifically
+/execute-plan plans/my-feature.md          # resumes current section in specific plan
+/execute-plan auth plans/my-feature.md     # resumes specific section in specific plan
 
 # The command will:
-# 1. Read the plan file (PLAN.md or specified path)
-# 2. Find where it left off
-# 3. Continue from there
-# 4. Update the plan file in real-time
-# 5. Complete all 11 phases
-# 6. Create PR at the end
+# 1. Parse arguments to determine section and file
+# 2. Read the plan file (PLAN.md or specified path)
+# 3. If no section specified, auto-select next pending/in-progress section
+# 4. Execute ONLY that one section (phases/tasks tagged with it)
+# 5. Find where it left off (within the section scope)
+# 6. Continue from there
+# 7. Update the plan file in real-time
+# 8. Complete all phases for the section
+# 9. Update section progress in the Sections table
+# 10. Prompt for next section or PR when done
+
+# Example workflow with sections:
+You: /plan                              # Create plan with multiple sections
+You: /execute-plan                      # Auto-selects first pending section
+# ... section completes ...
+You: /execute-plan                      # Auto-selects next pending section
+# ... section completes ...
+You: /execute-plan settings             # Or explicitly choose a section
+# ... section completes ...
+You: /start-pr                          # Create PR when all sections done
 ```
 
 ---

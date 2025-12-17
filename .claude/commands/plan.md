@@ -4,7 +4,30 @@
 
 ---
 
-You are creating a comprehensive development plan that will be reviewed and approved by the user before execution. This is the first step in a systematic, collaborative development approach where the user is involved in all design decisions. This is a crucial and very important element in the project execution. Therefore, read carefully the requirements, take proper time to analyze and ultrathink to produce the final result. 
+You are creating a comprehensive development plan that will be reviewed and approved by the user before execution. This is the first step in a systematic, collaborative development approach where the user is involved in all design decisions. This is a crucial and very important element in the project execution. Therefore, read carefully the requirements, take proper time to analyze and ultrathink to produce the final result.
+
+## Parameters
+
+This command accepts an optional section name:
+
+```bash
+# Create a plan without a section name (auto-generates section names for multi-feature plans)
+/plan
+
+# Create a plan with a specific section name
+/plan authentication
+/plan user-profile
+/plan payment-integration
+```
+
+**Argument:** `$ARGUMENTS` (optional - section name in kebab-case)
+
+**Section Names:**
+- If provided: The plan will be labeled with this section name
+- If not provided AND plan has multiple features: Auto-generate section names based on features
+- Section names allow selective execution via `/execute-plan <section-name>`
+
+---
 
 ## Your Task
 
@@ -12,7 +35,8 @@ You are creating a comprehensive development plan that will be reviewed and appr
 2. **Analyze the codebase** to understand existing architecture
 3. **Present design decisions** for user approval
 4. **Create a detailed plan** broken down into phases and tasks
-5. **Write the approved plan** to `PLAN.md`
+5. **Assign section name(s)** - use provided name or auto-generate for multi-feature plans
+6. **Write the approved plan** to `PLAN.md`
 
 ---
 
@@ -197,6 +221,20 @@ The plan should use this structure:
 
 ---
 
+## Sections
+
+This plan contains the following sections (execute individually with `/execute-plan <section-name>`):
+
+| Section | Description | Status | Progress |
+|---------|-------------|--------|----------|
+| `section-name-1` | Brief description | ⏳ Pending | 0% |
+| `section-name-2` | Brief description | ⏳ Pending | 0% |
+
+**Execute all:** `/execute-plan`
+**Execute specific section:** `/execute-plan section-name-1`
+
+---
+
 ## 1. Overview
 
 ### Feature Description
@@ -303,6 +341,7 @@ Each of the 11 phases should follow this structure:
 
 ```markdown
 ### Phase X: [Phase Name]
+**Section:** `section-name` <!-- Links this phase to a specific section -->
 **Status:** ⏳ Pending
 **Agent:** [Agent name]
 **Estimated Time:** [X] hours
@@ -310,11 +349,13 @@ Each of the 11 phases should follow this structure:
 **Tasks:**
 - [ ] Task X.1: [Task name]
   - Status: ⏳ Pending
+  - Section: `section-name`
   - Files: `path/to/files/`
   - Details: [Specific details]
 
 - [ ] Task X.2: [Task name]
   - Status: ⏳ Pending
+  - Section: `section-name`
   - Files: `path/to/files/`
   - Details: [Specific details]
 
@@ -335,6 +376,30 @@ Details:
 Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
 ```
+
+### Section Assignment Rules
+
+When creating a plan:
+
+1. **Single-feature plan with explicit section name:**
+   - Use the provided section name (from `$ARGUMENTS`)
+   - All phases get the same section name
+   - Example: `/plan authentication` → all phases tagged with `authentication`
+
+2. **Single-feature plan without section name:**
+   - Auto-generate a section name from the feature name (kebab-case)
+   - Example: "User Profile Management" → `user-profile-management`
+
+3. **Multi-feature plan (big plan):**
+   - Identify distinct features/components in the plan
+   - Auto-generate a section name for each feature
+   - Tag each phase/task with its corresponding section
+   - Present the section breakdown to the user for approval
+   - Example: A "Complete App Setup" plan might have sections:
+     - `authentication` - Login, registration, password reset
+     - `user-profile` - Profile management, settings
+     - `dashboard` - Main dashboard, widgets
+     - `notifications` - Push notifications, in-app alerts
 
 The 11 standard phases are:
 1. Architecture & Specification
@@ -602,28 +667,53 @@ Ready to execute? Copy to PLAN.md first: `cp [chosen-path] PLAN.md`
 ## Usage
 
 ```bash
-# Invoke this command
+# Invoke this command without a section name
 /plan
+
+# Invoke with a specific section name
+/plan authentication
+/plan user-profile
+/plan payment-integration
 
 # Then you will:
 # 1. Describe what you want to build
 # 2. Answer design questions (presented as options)
-# 3. Review the proposed plan
+# 3. Review the proposed plan (with section assignments)
 # 4. Approve, adjust, or discuss
-# 5. Plan written to PLAN.md
-# 6. Run /execute-plan to start implementation
+# 5. Plan written to PLAN.md with section tags
+# 6. Run /execute-plan to start implementation (all sections)
+# 7. Or run /execute-plan <section-name> for specific section
 
-# Example:
-You: /plan
-Claude: "What would you like to build?"
-You: "User profile management"
+# Example with section name:
+You: /plan authentication
+Claude: "What authentication features do you need?"
+You: "Google OAuth and email/password"
 Claude: [Asks clarifying questions with options]
 You: [Choose options]
-Claude: [Presents complete plan]
+Claude: [Presents plan with all phases tagged as `authentication`]
 You: "Looks good, approve"
 Claude: [Writes to PLAN.md]
-You: /execute-plan
-Claude: [Begins implementation, updates PLAN.md]
+You: /execute-plan authentication   # Execute only this section
+Claude: [Begins implementation of authentication section]
+
+# Example with multi-feature plan (auto-generated sections):
+You: /plan
+Claude: "What would you like to build?"
+You: "Complete user management: login, profile, settings, notifications"
+Claude: [Asks clarifying questions]
+Claude: "I've identified 4 distinct sections for this plan:
+         - `authentication` - Login, registration, password reset
+         - `user-profile` - Profile viewing and editing
+         - `settings` - App preferences and configurations
+         - `notifications` - Push and in-app notifications
+
+         Does this breakdown look correct?"
+You: "Yes, that works"
+Claude: [Presents complete plan with section assignments]
+You: "Approve"
+Claude: [Writes to PLAN.md]
+You: /execute-plan                   # Execute all sections
+You: /execute-plan authentication    # Or execute just one section
 ```
 
 ---

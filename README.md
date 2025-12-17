@@ -190,10 +190,9 @@ flutter-firebase-template/
 │   └── commit-msg
 │
 ├── .github/workflows/       # CI/CD workflows
-│   ├── ci.yml
+│   ├── ci.yml               # Tests + production deploy on main
 │   ├── deploy-dev.yml
-│   ├── deploy-staging.yml
-│   └── deploy-prod.yml
+│   └── deploy-staging.yml
 │
 ├── CLAUDE.md.template       # Main Claude Code config template
 ├── firebase.json.template   # Firebase config template

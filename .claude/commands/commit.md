@@ -395,8 +395,8 @@ Week:       /commit --push (end of day)
             ↓
 Friday:     /start-pr (final quality checks + merge)
             ↓
-After:      /promote staging
-            /promote prod
+After:      /promote staging (optional UAT)
+            /promote main (production)
 ```
 
 **Recommended commit frequency:**

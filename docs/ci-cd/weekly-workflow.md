@@ -234,14 +234,11 @@ git branch -d dev/2024-45-tax-calculator
 After merging to dev, promote as needed:
 
 ```bash
-# Deploy to staging for UAT testing
+# (Optional) Deploy to staging for UAT testing
 /promote staging
 
-# After UAT approval, merge to stable main
-/promote main
-
 # Deploy to production
-/promote prod
+/promote main
 ```
 
 ## Handling Incomplete Work
@@ -308,8 +305,7 @@ Fixes #123"
 # Create PR to main immediately
 gh pr create --title "HOTFIX: Tax Calculation Error" --base main
 
-# After merge to main, deploy to production
-/promote prod
+# After merge to main, CI auto-deploys to production
 
 # Also merge the fix to dev to keep branches in sync
 git checkout dev
@@ -469,14 +465,11 @@ git branch -d dev/2024-45-tax-calculator
 # === AFTER MERGE ===
 # Promote to other environments as needed
 
-# Deploy to staging for UAT testing
+# (Optional) Deploy to staging for UAT testing
 /promote staging
 
-# After UAT approval, merge to stable main
-/promote main
-
 # Deploy to production
-/promote prod
+/promote main
 
 # Ready for next week!
 ```

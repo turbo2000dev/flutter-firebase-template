@@ -10,23 +10,106 @@ This document describes the plan-based development workflow that enables systema
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  1. Run /plan                                               │
+│  1. Run /plan [section-name]                                │
 │     - Describe feature                                      │
 │     - Answer design questions                               │
-│     - Review proposed plan                                  │
-│     - Approve plan → PLAN.md created                        │
+│     - Review proposed plan with section assignments         │
+│     - Approve plan → PLAN.md created with sections          │
 ├─────────────────────────────────────────────────────────────┤
-│  2. Run /execute-plan                                       │
+│  2. Run /execute-plan [section-name]                        │
+│     - Execute all sections or specific section              │
 │     - Agents execute phases systematically                  │
 │     - PLAN.md updates in real-time                         │
-│     - User can monitor progress anytime                     │
+│     - Section progress tracked separately                   │
 │     - Pause/resume at any time                              │
 ├─────────────────────────────────────────────────────────────┤
 │  3. Review results                                          │
-│     - All phases complete                                   │
+│     - All phases/sections complete                          │
 │     - PR created                                            │
 │     - PLAN.md shows 100% completion                         │
 └─────────────────────────────────────────────────────────────┘
+```
+
+## Section-Based Planning
+
+Sections allow you to organize large plans into logical units that can be executed independently.
+
+### What are Sections?
+
+- **Sections** are named groups of phases/tasks within a plan
+- Each section represents a distinct feature or component
+- Sections can be executed individually or all together
+- Progress is tracked per-section and overall
+
+### Section Naming
+
+```bash
+# Explicit section name
+/plan authentication              # All phases tagged as `authentication`
+/plan-from-requirements payment   # All phases tagged as `payment`
+
+# Auto-generated sections (for multi-feature plans)
+/plan                             # Claude identifies and names sections
+```
+
+### Section Examples
+
+| Section Name | Description |
+|--------------|-------------|
+| `authentication` | Login, registration, password reset |
+| `user-profile` | Profile viewing, editing, settings |
+| `dashboard` | Main dashboard, widgets, charts |
+| `notifications` | Push, in-app, email notifications |
+| `payment` | Checkout, subscriptions, invoices |
+
+### Executing Sections
+
+```bash
+# Execute next pending section (auto-selects)
+/execute-plan
+
+# Execute specific section
+/execute-plan authentication
+/execute-plan user-profile
+
+# Execute section from specific file
+/execute-plan authentication plans/my-feature.md
+```
+
+**Note:** `/execute-plan` always executes ONE section at a time. If no section is specified, it auto-selects the next pending or in-progress section.
+
+### PLAN.md Section Structure
+
+```markdown
+## Sections
+
+| Section | Description | Status | Progress |
+|---------|-------------|--------|----------|
+| `authentication` | Login and registration | ✅ Completed | 100% |
+| `user-profile` | Profile management | 🚧 In Progress | 45% |
+| `settings` | App preferences | ⏳ Pending | 0% |
+
+**Execute all:** `/execute-plan`
+**Execute specific:** `/execute-plan authentication`
+```
+
+### Phase/Task Section Tags
+
+Each phase and task is tagged with its section:
+
+```markdown
+### Phase 2: Domain Layer Implementation
+**Section:** `authentication`
+**Status:** 🚧 In Progress
+
+**Tasks:**
+- [x] Task 2.1: Implement User entity
+  - Section: `authentication`
+  - Status: ✅ Completed
+
+- [ ] Task 2.2: Implement Profile entity
+  - Section: `user-profile`
+  - Status: ⏳ Pending
 ```
 
 ---
@@ -596,6 +679,25 @@ A: Edit PLAN.md to add the task, agents will see it and execute it.
 
 **Q: Can I use plan-based workflow with existing code?**
 A: Yes! Create plan for enhancements/refactoring. Adjust Phase 2-5 to modify existing code instead of creating new.
+
+**Q: What are sections and when should I use them?**
+A: Sections group related phases/tasks together. Use them when:
+- Building multiple features in one plan
+- Want to execute features incrementally
+- Need to prioritize certain features over others
+- Working on a large plan that spans multiple sessions
+
+**Q: Can I add a section to an existing plan?**
+A: Yes! Use `/plan section-name` and choose "Add to existing PLAN.md" when prompted. The new section will be appended.
+
+**Q: What happens if I run /execute-plan without a section name?**
+A: It auto-selects the next pending or in-progress section and executes only that one. Run `/execute-plan` again to execute the next section.
+
+**Q: Can I execute sections in any order?**
+A: Yes, sections are independent. Execute them in any order: `/execute-plan settings` then `/execute-plan authentication`.
+
+**Q: How do I see what sections exist in my plan?**
+A: Open PLAN.md and look at the "Sections" table near the top, or run `/execute-plan` which will show available sections.
 
 ---
 

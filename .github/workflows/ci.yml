@@ -209,13 +209,17 @@ jobs:
               }
             }
 
-  # Job 4: Build & Deploy Web to Firebase Hosting
+  # Job 4: Build & Deploy Web to Firebase Hosting (Production)
+  # This is the primary production deployment - triggered on push to main
   deploy-web:
-    name: Build & Deploy Web
+    name: Build & Deploy to Production
     runs-on: ubuntu-latest
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     timeout-minutes: 20
+    environment:
+      name: production
+      url: https://{{PROD_DOMAIN}}
 
     steps:
       - name: Checkout code
@@ -228,25 +232,69 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Enable web support
-        run: flutter config --enable-web
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: landing-page/package-lock.json
 
-      - name: Get dependencies
+      - name: Get Flutter dependencies
         run: flutter pub get
 
       - name: Run code generation
         run: flutter pub run build_runner build --delete-conflicting-outputs
 
-      - name: Build Web
-        run: flutter build web --release
+      - name: Build Astro landing page
+        if: hashFiles('landing-page/package.json') != ''
+        run: |
+          cd landing-page
+          npm ci
+          npm run build
+          mkdir -p ../public
+          cp -r dist/* ../public/
 
-      - name: Deploy to Firebase Hosting
+      - name: Create placeholder landing page
+        if: hashFiles('landing-page/package.json') == ''
+        run: |
+          mkdir -p public
+          echo '<!DOCTYPE html><html><head><title>{{PROJECT_DISPLAY_NAME}}</title></head><body><h1>{{PROJECT_DISPLAY_NAME}}</h1><a href="/app">Open App</a></body></html>' > public/index.html
+
+      - name: Build Flutter web (Production)
+        run: |
+          flutter build web --release --dart-define=ENVIRONMENT=prod --base-href /app/
+          mkdir -p public/app
+          cp -r build/web/* public/app/
+
+      - name: Deploy to Firebase Hosting (Production)
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_{{PROJECT_NAME_UPPER}} }}
-          channelId: live
           projectId: {{FIREBASE_PROJECT_ID}}
+          target: prod
+          channelId: live
+
+      - name: Create Git Tag
+        continue-on-error: true
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          TAG="deploy-$(date +'%Y%m%d-%H%M%S')"
+          git tag -a "$TAG" -m "Production deployment"
+          git push origin "$TAG"
+
+      - name: Deployment Summary
+        run: |
+          echo "## 🚀 Production Deployment Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Production" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**URLs:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Landing Page: https://{{PROD_DOMAIN}}" >> $GITHUB_STEP_SUMMARY
+          echo "- Flutter App: https://{{PROD_DOMAIN}}/app" >> $GITHUB_STEP_SUMMARY
 
   # Job 5: Deploy Wizard Images to Firebase Storage
   deploy-images:

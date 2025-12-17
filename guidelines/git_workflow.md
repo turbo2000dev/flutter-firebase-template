@@ -24,18 +24,11 @@ This document defines the Git workflow for the project, including branching stra
 │        ├────────────────────────────────────────────┐               │
 │        │                                            │               │
 │        │ /promote main                              │ /promote      │
-│        │ (no deployment)                            │ staging       │
+│        │ (auto-deploys to production)               │ staging       │
 │        ▼                                            ▼               │
 │   ┌─────────┐                                  ┌─────────┐          │
-│   │  main   │ ←── Stable/Release-Ready         │ staging │ ←── UAT │
-│   └────┬────┘                                  └─────────┘          │
-│        │                                                            │
-│        │ /promote prod                                              │
-│        │ (triggers deployment)                                      │
-│        ▼                                                            │
-│   ┌─────────┐                                                       │
-│   │  prod   │ ←── Production                                        │
-│   └─────────┘                                                       │
+│   │  main   │ ←── Production                   │ staging │ ←── UAT │
+│   └─────────┘                                  └─────────┘          │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -53,9 +46,9 @@ This document defines the Git workflow for the project, including branching stra
 ### Stable Branch
 
 #### `main`
-- **Purpose:** Stable, release-ready code
+- **Purpose:** Production code
 - **Protection:** Protected, only updated via `/promote main`
-- **Deployment:** None (code must be explicitly promoted to prod)
+- **Deployment:** Auto-deploys to production on push
 - **Testing:** Code already tested via CI/CD on `dev`
 - **Naming:** Always `main`
 - **Flow:** Updated from `dev` via `/promote main`
@@ -79,10 +72,9 @@ dev/2024-47-scenario-comparison
 3. Create weekly checkpoint commit at end of week (Friday)
 4. Create PR to `dev` using `/start-pr`
 5. Merge to `dev` after CI/CD passes
-6. Promote to `staging` for UAT: `/promote staging`
-7. Promote to `main` when stable: `/promote main`
-8. Deploy to production: `/promote prod`
-9. Delete branch after merge
+6. (Optional) Promote to `staging` for UAT: `/promote staging`
+7. Deploy to production: `/promote main`
+8. Delete branch after merge
 
 **See:** `docs/ci-cd/weekly-workflow.md` for detailed weekly workflow guide
 
@@ -102,7 +94,7 @@ feature/UI-789-dashboard-redesign
 2. Develop feature with commits after each phase
 3. Create PR to `dev` when ready
 4. Merge to `dev` after review
-5. Promote as needed (`/promote staging`, `/promote main`, `/promote prod`)
+5. Promote as needed (`/promote staging`, `/promote main`)
 6. Delete branch after merge
 
 ### Bug Fix Branches
@@ -138,8 +130,8 @@ hotfix/PROD-222-data-corruption
 1. Branch from `main` (urgent production fixes)
 2. Fix issue quickly
 3. Create PR to `main`
-4. After merge to `main`, also merge to `dev` to keep in sync
-5. Deploy to prod: `/promote prod`
+4. After merge to `main`, CI auto-deploys to production
+5. Also merge to `dev` to keep in sync
 6. Delete branch after merge
 
 ### Release Branches (Optional)
@@ -156,10 +148,9 @@ release/2.1.0-beta
 1. Branch from `main` when ready for release
 2. Final testing and bug fixes only
 3. Version bump and changelog update
-4. Merge back to `main` and tag
-5. Deploy: `/promote prod`
-6. Merge any fixes back to `dev`
-7. Delete branch after release
+4. Merge back to `main` and tag (CI auto-deploys to production)
+5. Merge any fixes back to `dev`
+6. Delete branch after release
 
 ## Commit Conventions
 
@@ -579,10 +570,8 @@ Reviewers should verify:
 
 The CI/CD pipeline runs automatically on:
 - **Pull requests to `dev`**: Full pipeline + preview deployment
-- **Push to `dev`**: Auto-deploys to dev environment
 - **Push to `staging`**: Auto-deploys to staging environment (UAT)
-- **Push to `main`**: Triggers beta deployment (iOS/Android)
-- **Manual trigger**: Production deployment (`deploy-prod.yml`)
+- **Push to `main`**: Full pipeline + auto-deploys to production + triggers beta deployment (iOS/Android)
 
 ### Pipeline Stages
 
@@ -724,9 +713,8 @@ git push
 # See docs/ci-cd/weekly-workflow.md for complete end-of-week process
 
 # 7. After merge to dev, promote as needed
-/promote staging   # For UAT testing
-/promote main      # When stable
-/promote prod      # For production deployment
+/promote staging   # For UAT testing (optional)
+/promote main      # Deploy to production
 ```
 
 ### Starting an Ad-Hoc Feature (outside weekly cycle)
@@ -754,9 +742,8 @@ git push -u origin feature/AUTH-123-oauth-login
 gh pr create --base dev
 
 # 7. After merge, promote as needed
-/promote staging   # For UAT
-/promote main      # When stable
-/promote prod      # For production
+/promote staging   # For UAT (optional)
+/promote main      # Deploy to production
 ```
 
 ### Syncing with Dev

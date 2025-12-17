@@ -155,10 +155,19 @@ python3 scripts/coverage-report.py --ci # Fails if below 80%
 - `/promote` - Promote code to staging, main, or production
 
 **Planning & Implementation:**
-- `/plan` - Create development plan
-- `/execute-plan` - Execute plan from PLAN.md
+- `/plan [section-name]` - Create development plan (with optional section name)
+- `/plan-from-requirements [section-name] [file]` - Create plan from requirements file
+- `/execute-plan [section-name]` - Execute plan from PLAN.md (one section at a time)
 - `/implement` - Implement a feature
 - `/new-feature` - Full feature development workflow
+
+**Section-Based Planning:**
+Plans are organized into sections for incremental execution (one section at a time):
+```bash
+/plan authentication                    # Create plan with section name
+/execute-plan authentication            # Execute specific section
+/execute-plan                           # Execute next pending section (auto-selects)
+```
 
 **Build & Deploy:**
 - `/deploy` - Deploy to environment
@@ -177,6 +186,7 @@ python3 scripts/coverage-report.py --ci # Fails if below 80%
 | `guidelines/state_management.md` | Riverpod 3.0 patterns with examples |
 | `guidelines/coding_standards.md` | Naming, formatting, documentation |
 | `guidelines/testing_strategy.md` | Test pyramid, coverage, CI setup |
+| `guidelines/planning.md` | Plan-based development, sections, PLAN.md |
 | `guidelines/astro-development.md` | Landing page development |
 | `guidelines/deployment.md` | Multi-environment deployment |
 
@@ -184,26 +194,24 @@ python3 scripts/coverage-report.py --ci # Fails if below 80%
 
 | Environment | Branch | Auto-Deploy | Promotion Command |
 |-------------|--------|-------------|-------------------|
-| Development | `dev` | Yes (on push) | N/A (merge via PR) |
+| Development | `dev` | No | N/A (merge via PR) |
 | Staging | `staging` | Yes (on push) | `/promote staging` |
-| Stable | `main` | No | `/promote main` |
-| Production | N/A | Manual trigger | `/promote prod` |
+| Production | `main` | Yes (on push) | `/promote main` |
 
 ## Git Workflow
 
 ### Branch Flow
 ```
 dev/YYYY-WW-* (feature) → dev (integration) → staging (UAT)
-                                            → main (stable) → prod (production)
+                                            → main (production)
 ```
 
 ### Development Cycle
 1. `/start-dev <description>` - Create `dev/YYYY-WW-<description>` branch from `dev`
 2. Develop, commit, push daily
 3. `/start-pr` - Run checks, create PR to `dev`, merge
-4. `/promote staging` - Deploy to staging for UAT
-5. `/promote main` - Merge to stable (no deployment)
-6. `/promote prod` - Deploy to production
+4. `/promote staging` - (Optional) Deploy to staging for UAT
+5. `/promote main` - Deploy to production
 
 ### Hooks
 - **Pre-commit:** Auto-format, lint, run affected tests

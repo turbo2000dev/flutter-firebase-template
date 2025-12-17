@@ -4,7 +4,40 @@
 
 ---
 
-You are creating a comprehensive development plan based on requirements documented in a file. This command reads the requirements, asks design questions, and creates a detailed plan in PLAN.md. This is a crucial and very important element in the project execution. Therefore, read carefully the requirements, take proper time to analyze and ultrathink to produce the final result. 
+You are creating a comprehensive development plan based on requirements documented in a file. This command reads the requirements, asks design questions, and creates a detailed plan in PLAN.md. This is a crucial and very important element in the project execution. Therefore, read carefully the requirements, take proper time to analyze and ultrathink to produce the final result.
+
+## Parameters
+
+This command accepts an optional section name followed by the requirements file path:
+
+```bash
+# From default requirements file, auto-generate section names
+/plan-from-requirements
+
+# From specific requirements file, auto-generate section names
+/plan-from-requirements specs/authentication.md
+
+# With explicit section name
+/plan-from-requirements authentication
+/plan-from-requirements authentication specs/auth-requirements.md
+
+# With section name and specific file
+/plan-from-requirements user-profile requirements/profile.md
+```
+
+**Arguments:** `$ARGUMENTS` (optional - `[section-name] [file-path]`)
+
+**Parsing Rules:**
+1. If argument ends with `.md` → it's a file path
+2. If argument doesn't end with `.md` → it's a section name
+3. Can have both: section name first, then file path
+
+**Section Names:**
+- If provided: The plan will be labeled with this section name
+- If not provided AND plan has multiple features: Auto-generate section names based on requirements
+- Section names allow selective execution via `/execute-plan <section-name>`
+
+---
 
 ## Your Task
 
@@ -12,7 +45,8 @@ You are creating a comprehensive development plan based on requirements document
 2. **Analyze the codebase** to understand existing architecture
 3. **Present design decisions** for user approval
 4. **Create a detailed plan** broken down into phases and tasks
-5. **Write the approved plan** to `PLAN.md`
+5. **Assign section name(s)** - use provided name or auto-generate based on requirements
+6. **Write the approved plan** to `PLAN.md`
 
 ---
 
@@ -320,6 +354,20 @@ The plan should include:
 **Last Updated:** [Date]
 **Overall Progress:** 0%
 **Requirements Source:** [file_path]
+
+---
+
+## Sections
+
+This plan contains the following sections (execute individually with `/execute-plan <section-name>`):
+
+| Section | Description | Status | Progress |
+|---------|-------------|--------|----------|
+| `section-name-1` | Brief description | ⏳ Pending | 0% |
+| `section-name-2` | Brief description | ⏳ Pending | 0% |
+
+**Execute all:** `/execute-plan`
+**Execute specific section:** `/execute-plan section-name-1`
 
 ---
 ```
@@ -773,17 +821,55 @@ If creating new plan:
 ## Usage
 
 ```bash
-# Invoke this command
+# Invoke without arguments (uses default requirements.md)
 /plan-from-requirements
 
+# With a specific requirements file
+/plan-from-requirements specs/feature-x.md
+
+# With a section name (uses default requirements.md)
+/plan-from-requirements authentication
+
+# With both section name and file path
+/plan-from-requirements authentication specs/auth-requirements.md
+/plan-from-requirements user-profile requirements/profile.md
+
 # You will then:
-# 1. Provide path to requirements file (or use default: requirements.md)
-# 2. Confirm understanding of requirements
+# 1. Confirm the requirements file and section name
+# 2. Review requirements summary
 # 3. Answer design questions
-# 4. Review the proposed plan
+# 4. Review the proposed plan (with section assignments)
 # 5. Approve or request adjustments
-# 6. Plan is written to PLAN.md
-# 7. Run /execute-plan to begin
+# 6. Plan is written to PLAN.md with section tags
+# 7. Run /execute-plan to execute all sections
+# 8. Or run /execute-plan <section-name> for specific section
+
+# Example with explicit section:
+You: /plan-from-requirements authentication specs/auth.md
+Claude: [Reads requirements from specs/auth.md]
+Claude: [Summarizes requirements]
+You: [Confirm understanding]
+Claude: [Asks design questions]
+You: [Choose options]
+Claude: [Presents plan with all phases tagged as `authentication`]
+You: "Approve"
+Claude: [Writes to PLAN.md]
+You: /execute-plan authentication   # Execute only this section
+
+# Example with auto-generated sections from big requirements:
+You: /plan-from-requirements specs/complete-app.md
+Claude: [Reads comprehensive requirements]
+Claude: "Based on the requirements, I've identified 3 sections:
+         - `onboarding` - First-time user setup
+         - `core-features` - Main app functionality
+         - `settings` - Configuration and preferences
+
+         Does this breakdown look correct?"
+You: "Yes"
+Claude: [Presents complete plan with section assignments]
+You: "Approve"
+Claude: [Writes to PLAN.md]
+You: /execute-plan onboarding   # Start with just onboarding
 ```
 
 ---

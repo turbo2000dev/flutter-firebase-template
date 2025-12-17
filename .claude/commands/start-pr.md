@@ -293,26 +293,25 @@ This will:
 - Auto-deploy to staging environment
 - URL: {{STAGING_URL}}
 
-### 3. Deploy to Production (after testing)
+### 3. Deploy to Production
 
-When ready for production (requires code in main):
+When ready for production:
 
 ```bash
-/promote prod
+/promote main
 ```
 
 This will:
-- Deploy main → production
-- Trigger production deployment workflow
+- Merge dev → main
+- Auto-deploy to production via CI
 
 ---
 
 ## Typical Workflow
 
 1. `/start-pr` → Merge to dev ✅ (done)
-2. `/promote staging` → Test on staging
-3. `/promote main` → Merge to stable main
-4. `/promote prod` → Deploy to production
+2. `/promote staging` → (Optional) Test on staging
+3. `/promote main` → Deploy to production
 
 ---
 

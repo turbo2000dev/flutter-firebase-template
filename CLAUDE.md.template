@@ -230,10 +230,9 @@ The application follows **Clean Architecture** with a **feature-first** organiza
 │   └── setup-hosting-targets.sh    # Initialize Firebase hosting targets
 │
 ├── .github/workflows/              # GitHub Actions CI/CD
-│   ├── ci.yml                      # Main CI pipeline
+│   ├── ci.yml                      # Main CI pipeline (tests + production deploy on main)
 │   ├── deploy-dev.yml              # Deploy to development
-│   ├── deploy-staging.yml          # Deploy to staging
-│   └── deploy-prod.yml             # Deploy to production
+│   └── deploy-staging.yml          # Deploy to staging
 │
 ├── test/                           # Flutter tests
 │   ├── unit/                       # Unit tests (50%)
