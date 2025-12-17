@@ -204,7 +204,7 @@ git checkout dev
 
 **Pre-requisites:**
 - Code must be in `main` branch
-- Run validation checks before deployment
+- CI must have passed on main (verified automatically)
 
 ```bash
 echo "Deploying main → production..."
@@ -213,10 +213,16 @@ echo "Deploying main → production..."
 git checkout main
 git pull origin main
 
-# Run pre-production validation
-echo "Running pre-production validation..."
-flutter analyze
-flutter test
+# Verify CI passed on main (trust CI as source of truth)
+echo "Verifying CI status on main..."
+CI_STATUS=$(gh run list --branch main --limit 1 --json conclusion --jq '.[0].conclusion')
+if [ "$CI_STATUS" != "success" ]; then
+    echo "ERROR: CI has not passed on main branch."
+    echo "Latest CI status: $CI_STATUS"
+    echo "Please ensure CI passes before deploying to production."
+    exit 1
+fi
+echo "✅ CI passed on main"
 
 # Trigger production deployment
 gh workflow run deploy-prod.yml
@@ -226,6 +232,9 @@ gh workflow run deploy-prod.yml
 # git merge main --no-edit
 # git push origin prod
 ```
+
+**Note:** Tests are NOT run locally. CI is the single source of truth.
+The deploy-prod.yml workflow will skip tests if CI already passed.
 
 **Post-promotion message:**
 ```markdown
@@ -271,29 +280,32 @@ fi
 git fetch origin
 ```
 
-#### For `/promote prod` (Required Validation)
+#### For `/promote prod` (CI Status Verification)
 
 ```bash
-echo "Running pre-production validation..."
+echo "Verifying CI status on main..."
 
-# 1. Static analysis
-flutter analyze
-if [ $? -ne 0 ]; then
-    echo "FAILED: Static analysis issues found."
+# Check that CI passed on main branch (trust CI as source of truth)
+CI_STATUS=$(gh run list --branch main --limit 1 --json conclusion --jq '.[0].conclusion')
+if [ "$CI_STATUS" != "success" ]; then
+    echo "FAILED: CI has not passed on main branch."
+    echo "Latest CI status: $CI_STATUS"
+    echo ""
+    echo "Options:"
+    echo "  1. Wait for CI to complete and pass"
+    echo "  2. Fix failing tests and push to main"
+    echo "  3. Use URGENT prefix to bypass (not recommended)"
     exit 1
 fi
 
-# 2. Run tests
-flutter test
-if [ $? -ne 0 ]; then
-    echo "FAILED: Tests are failing."
-    exit 1
-fi
-
-# 3. Check coverage (warning only)
-flutter test --coverage
-python3 scripts/coverage-report.py --ci || echo "WARNING: Coverage below threshold."
+echo "✅ CI passed - safe to deploy to production"
 ```
+
+**Why no local tests?**
+- CI already ran tests when code was merged to main
+- Running tests again locally wastes ~2-5 minutes
+- CI results are authoritative and consistent
+- deploy-prod.yml will skip its test job if CI passed
 
 ---
 

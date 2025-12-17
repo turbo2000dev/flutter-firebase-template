@@ -1,17 +1,16 @@
 # Start Pull Request
 
-**Description:** Initiate pull request activities by running validation checks, creating a PR to dev, and guiding through the merge process.
+**Description:** Initiate pull request activities by running quick local validation, creating a PR to dev, and guiding through the merge process. Full test suite runs in CI.
 
 ---
 
 ## Usage
 
 ```bash
-/start-pr [optional: --skip-tests] [optional: --draft]
+/start-pr [optional: --draft]
 ```
 
 **Options:**
-- `--skip-tests` - Skip running tests (not recommended, use only if tests were recently run)
 - `--draft` - Create as draft PR instead of ready for review
 
 ---
@@ -26,8 +25,8 @@
 │  1. Pre-flight Checks                                               │
 │     └─→ Verify on feature branch, check uncommitted changes         │
 │                                                                     │
-│  2. Quality Validation                                              │
-│     └─→ Format → Analyze → Test → Coverage                          │
+│  2. Quick Local Validation (fast gatekeepers)                       │
+│     └─→ Format → Analyze (tests run in CI)                          │
 │                                                                     │
 │  3. Create Pull Request                                             │
 │     └─→ Push changes → Create PR to dev → Wait for CI               │
@@ -40,6 +39,9 @@
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+**Note:** Tests, coverage, and build verification run in CI (single source of truth).
+Local checks are fast gatekeepers to catch obvious issues before wasting CI time.
 
 ---
 
@@ -98,14 +100,15 @@ git log HEAD..origin/$CURRENT_BRANCH --oneline 2>/dev/null
 
 ---
 
-## Phase 2: Quality Validation
+## Phase 2: Quick Local Validation
 
-Run all quality checks before creating PR:
+Run fast local checks before creating PR. These are gatekeepers to catch obvious issues.
+Full tests, coverage, and build verification run in CI (single source of truth).
 
 ### Step 1: Code Formatting
 
 ```bash
-echo "Step 1/5: Formatting code..."
+echo "Step 1/2: Formatting code..."
 dart format .
 
 # Check if formatting made changes
@@ -121,7 +124,7 @@ fi
 ### Step 2: Static Analysis
 
 ```bash
-echo "Step 2/5: Running static analysis..."
+echo "Step 2/2: Running static analysis..."
 flutter analyze
 
 # If issues found, attempt auto-fix
@@ -142,51 +145,11 @@ fi
 - Show the issues
 - Ask user: **Fix issues and retry** or **Abort**
 
-### Step 3: Run Tests
-
-```bash
-echo "Step 3/5: Running tests..."
-flutter test
-```
-
-**If tests fail:**
-- Show failing tests
-- Ask user: **Fix tests and retry** or **Abort**
-- Optionally: **Skip tests** (with warning)
-
-### Step 4: Check Test Coverage
-
-```bash
-echo "Step 4/5: Checking test coverage..."
-flutter test --coverage
-
-# Use coverage script if available
-if [ -f "scripts/coverage-report.py" ]; then
-    python3 scripts/coverage-report.py --ci
-else
-    # Fallback to basic coverage check
-    lcov --summary coverage/lcov.info | grep "lines"
-fi
-```
-
-**Coverage Requirements:**
-- Overall: ≥80%
-- Critical components: 100%
-
-**If coverage below threshold:**
-- Show coverage report
-- Warn user but allow proceeding (coverage is informational)
-
-### Step 5: Build Check
-
-```bash
-echo "Step 5/5: Verifying build..."
-flutter build web --release --base-href /app/
-```
-
-**If build fails:**
-- Show build errors
-- Abort and ask user to fix
+**Why no local tests?**
+- Tests, coverage, and build run in CI as the single source of truth
+- This avoids duplicate work (tests would run locally AND in CI)
+- CI results are authoritative and consistent across all contributors
+- Local checks are fast gatekeepers (~30 seconds) vs full test suite (~2-5 minutes)
 
 ---
 
@@ -231,22 +194,16 @@ gh pr create \
 - <Feature/component 2>
 - <Feature/component 3>
 
-## Quality Assurance
-
-### Tests
-- ✅ All tests passing: X/X
-- ✅ Coverage: X% (target: 80%)
-
-### Code Quality
-- ✅ `flutter analyze` - No issues
+## Pre-PR Checks (Local)
 - ✅ `dart format` - Applied
-- ✅ Build successful
+- ✅ `flutter analyze` - No issues
+
+## CI/CD
+Tests, coverage, and build verification will run automatically.
+CI is the single source of truth for quality gates.
 
 ## Commits
 <List of commits in this PR>
-
-## CI/CD
-All checks will run automatically upon PR creation.
 
 ---
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
@@ -415,17 +372,16 @@ echo "You can merge manually once checks pass."
 At the end of Phase 2, provide a summary:
 
 ```markdown
-## Quality Validation Report
+## Local Validation Report
 
 | Check | Status | Details |
 |-------|--------|---------|
-| Formatting | ✅ Pass | No issues |
+| Formatting | ✅ Pass | Code formatted |
 | Analysis | ✅ Pass | No issues found |
-| Tests | ✅ Pass | 156/156 passing |
-| Coverage | ✅ Pass | 85% (target: 80%) |
-| Build | ✅ Pass | Web build successful |
 
-**Overall:** Ready for PR ✅
+**Local checks passed** - Ready to create PR ✅
+
+**Note:** Full quality gates (tests, coverage, build) run in CI.
 ```
 
 ---

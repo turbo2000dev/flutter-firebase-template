@@ -11,28 +11,47 @@ env:
   NODE_VERSION: '20'
 
 jobs:
-  check-urgent:
-    name: Check for Urgent Deploy
+  check-skip-tests:
+    name: Check if Tests Can Be Skipped
     runs-on: ubuntu-latest
     outputs:
-      is_urgent: ${{ steps.check.outputs.urgent }}
+      skip_tests: ${{ steps.check.outputs.skip }}
     steps:
-      - name: Check commit message for URGENT prefix
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if tests should be skipped
         id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           COMMIT_MSG="${{ github.event.head_commit.message }}"
+          COMMIT_SHA="${{ github.sha }}"
+
+          # Check for URGENT prefix
           if [[ "$COMMIT_MSG" == URGENT* ]]; then
-            echo "urgent=true" >> $GITHUB_OUTPUT
-            echo "::warning::⚠️ URGENT deployment detected - skipping tests!"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "::warning::⚠️ URGENT deployment - skipping tests!"
+            exit 0
+          fi
+
+          # Check if CI already passed for this commit (from dev branch)
+          echo "Checking CI status for commit $COMMIT_SHA..."
+          CI_STATUS=$(gh api repos/${{ github.repository }}/commits/$COMMIT_SHA/check-runs --jq '.check_runs[] | select(.name == "Code Quality & Tests") | .conclusion' 2>/dev/null || echo "")
+
+          if [ "$CI_STATUS" == "success" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "✅ CI already passed for this commit - skipping redundant tests"
           else
-            echo "urgent=false" >> $GITHUB_OUTPUT
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "CI status: $CI_STATUS - running tests"
           fi
 
   test:
     name: Run Tests
     runs-on: ubuntu-latest
-    needs: check-urgent
-    if: needs.check-urgent.outputs.is_urgent != 'true'
+    needs: check-skip-tests
+    if: needs.check-skip-tests.outputs.skip_tests != 'true'
 
     steps:
       - name: Checkout code
@@ -89,8 +108,8 @@ jobs:
   deploy-staging:
     name: Build and Deploy to Staging
     runs-on: ubuntu-latest
-    needs: [check-urgent, test]
-    if: always() && (needs.check-urgent.outputs.is_urgent == 'true' || needs.test.result == 'success')
+    needs: [check-skip-tests, test]
+    if: always() && (needs.check-skip-tests.outputs.skip_tests == 'true' || needs.test.result == 'success')
     environment:
       name: staging
       url: https://staging.{{PROD_DOMAIN}}
@@ -152,9 +171,16 @@ jobs:
         run: |
           echo "## Deployment Complete! 🚀" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ needs.check-urgent.outputs.is_urgent }}" == "true" ]; then
-            echo "> [!CAUTION]" >> $GITHUB_STEP_SUMMARY
-            echo "> **URGENT DEPLOYMENT** - Tests were skipped! Follow up with a proper tested deployment." >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.check-skip-tests.outputs.skip_tests }}" == "true" ]; then
+            # Check if it was URGENT or CI-passed
+            COMMIT_MSG="${{ github.event.head_commit.message }}"
+            if [[ "$COMMIT_MSG" == URGENT* ]]; then
+              echo "> [!CAUTION]" >> $GITHUB_STEP_SUMMARY
+              echo "> **URGENT DEPLOYMENT** - Tests were skipped! Follow up with a proper tested deployment." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "> [!NOTE]" >> $GITHUB_STEP_SUMMARY
+              echo "> Tests skipped - CI already passed for this commit." >> $GITHUB_STEP_SUMMARY
+            fi
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
           echo "**Environment:** Staging" >> $GITHUB_STEP_SUMMARY

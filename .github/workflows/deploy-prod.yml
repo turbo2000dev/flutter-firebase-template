@@ -26,7 +26,7 @@ jobs:
     name: Validate Deployment
     runs-on: ubuntu-latest
     outputs:
-      is_urgent: ${{ steps.check-urgent.outputs.urgent }}
+      skip_tests: ${{ steps.check-skip.outputs.skip }}
 
     steps:
       - name: Validate confirmation
@@ -46,23 +46,38 @@ jobs:
             exit 1
           fi
 
-      - name: Check for urgent deployment
-        id: check-urgent
+      - name: Check if tests should be skipped
+        id: check-skip
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          # Check both: manual skip_tests input OR commit message starting with URGENT
           COMMIT_MSG=$(git log -1 --pretty=%B)
+          COMMIT_SHA="${{ github.sha }}"
+
+          # Check for manual skip_tests or URGENT prefix
           if [ "${{ github.event.inputs.skip_tests }}" == "true" ] || [[ "$COMMIT_MSG" == URGENT* ]]; then
-            echo "urgent=true" >> $GITHUB_OUTPUT
+            echo "skip=true" >> $GITHUB_OUTPUT
             echo "::warning::⚠️ URGENT PRODUCTION deployment - skipping tests!"
+            exit 0
+          fi
+
+          # Check if CI already passed for this commit
+          echo "Checking CI status for commit $COMMIT_SHA..."
+          CI_STATUS=$(gh api repos/${{ github.repository }}/commits/$COMMIT_SHA/check-runs --jq '.check_runs[] | select(.name == "Code Quality & Tests") | .conclusion' 2>/dev/null || echo "")
+
+          if [ "$CI_STATUS" == "success" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "✅ CI already passed for this commit - skipping redundant tests"
           else
-            echo "urgent=false" >> $GITHUB_OUTPUT
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "CI status: $CI_STATUS - running tests"
           fi
 
   test:
     name: Run Tests
     runs-on: ubuntu-latest
     needs: validate
-    if: needs.validate.outputs.is_urgent != 'true'
+    if: needs.validate.outputs.skip_tests != 'true'
 
     steps:
       - name: Checkout code
@@ -120,7 +135,7 @@ jobs:
     name: Build and Deploy to Production
     runs-on: ubuntu-latest
     needs: [validate, test]
-    if: always() && (needs.validate.outputs.is_urgent == 'true' || needs.test.result == 'success')
+    if: always() && (needs.validate.outputs.skip_tests == 'true' || needs.test.result == 'success')
     environment:
       name: production
       url: https://{{PROD_DOMAIN}}
@@ -228,10 +243,17 @@ jobs:
         run: |
           echo "## 🚀 Production Deployment Complete!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ needs.validate.outputs.is_urgent }}" == "true" ]; then
-            echo "> [!CAUTION]" >> $GITHUB_STEP_SUMMARY
-            echo "> **⚠️ URGENT DEPLOYMENT** - Tests were skipped!" >> $GITHUB_STEP_SUMMARY
-            echo "> This deployment bypassed quality checks. Schedule a follow-up deployment with full testing ASAP." >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.validate.outputs.skip_tests }}" == "true" ]; then
+            # Check if it was URGENT/skip_tests or CI-passed
+            COMMIT_MSG=$(git log -1 --pretty=%B)
+            if [ "${{ github.event.inputs.skip_tests }}" == "true" ] || [[ "$COMMIT_MSG" == URGENT* ]]; then
+              echo "> [!CAUTION]" >> $GITHUB_STEP_SUMMARY
+              echo "> **⚠️ URGENT DEPLOYMENT** - Tests were skipped!" >> $GITHUB_STEP_SUMMARY
+              echo "> This deployment bypassed quality checks. Schedule a follow-up deployment with full testing ASAP." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "> [!NOTE]" >> $GITHUB_STEP_SUMMARY
+              echo "> Tests skipped - CI already passed for this commit." >> $GITHUB_STEP_SUMMARY
+            fi
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
           echo "**Environment:** Production" >> $GITHUB_STEP_SUMMARY
@@ -254,6 +276,7 @@ jobs:
           echo "- [ ] Verify Flutter app loads at /app" >> $GITHUB_STEP_SUMMARY
           echo "- [ ] Test authentication flow" >> $GITHUB_STEP_SUMMARY
           echo "- [ ] Monitor Crashlytics for new errors" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ needs.validate.outputs.is_urgent }}" == "true" ]; then
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          if [ "${{ github.event.inputs.skip_tests }}" == "true" ] || [[ "$COMMIT_MSG" == URGENT* ]]; then
             echo "- [ ] **Schedule follow-up deployment with full tests**" >> $GITHUB_STEP_SUMMARY
           fi
