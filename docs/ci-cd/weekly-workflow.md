@@ -33,11 +33,11 @@ After merge     → Promote to staging/main/prod as needed (/promote)
 git checkout dev
 git pull origin dev
 
-# Create weekly branch (format: dev/YYYY-WW-description)
-git checkout -b dev/2024-45-tax-calculator
+# Create weekly branch (format: feature/YYYY-WW-description)
+git checkout -b feature/2024-45-tax-calculator
 
 # Push branch to remote
-git push -u origin dev/2024-45-tax-calculator
+git push -u origin feature/2024-45-tax-calculator
 ```
 
 **Branch Naming Convention:**
@@ -47,9 +47,9 @@ dev/<year>-<week-number>-<brief-description>
 
 **Examples:**
 ```
-dev/2024-45-tax-calculator
-dev/2024-46-asset-management
-dev/2024-47-scenario-comparison
+feature/2024-45-tax-calculator
+feature/2024-46-asset-management
+feature/2024-47-scenario-comparison
 ```
 
 ### 2. During the Week (Monday-Thursday)
@@ -72,7 +72,7 @@ git commit -m "feat(scope): description
 Co-Authored-By: Claude <noreply@anthropic.com>"
 
 # Push to remote daily
-git push origin dev/2024-45-tax-calculator
+git push origin feature/2024-45-tax-calculator
 ```
 
 **Commit Frequency:**
@@ -178,7 +178,7 @@ EOF
 
 # Or manually:
 # Push final commit
-git push origin dev/2024-45-tax-calculator
+git push origin feature/2024-45-tax-calculator
 
 # Create PR to dev using GitHub CLI
 gh pr create --base dev --title "Week 45: Tax Calculator Implementation" \
@@ -226,7 +226,7 @@ git checkout dev
 git pull origin dev
 
 # Delete local weekly branch
-git branch -d dev/2024-45-tax-calculator
+git branch -d feature/2024-45-tax-calculator
 ```
 
 **Step 5: Promote to Other Environments**
@@ -314,7 +314,7 @@ git merge main
 git push origin dev
 
 # Pull into your weekly branch if still active
-git checkout dev/2024-45-tax-calculator
+git checkout feature/2024-45-tax-calculator
 git merge dev
 ```
 
@@ -387,8 +387,7 @@ Before merging to dev, the PR must pass:
 |-------------|--------|
 | `dev` | Auto-deploy to dev environment |
 | `staging` | Auto-deploy to staging environment (UAT) |
-| `main` | Triggers beta deployment (iOS/Android) |
-| Manual trigger | Production deployment |
+| `main` | Full deployment: Web (production), iOS (TestFlight), Android (Play Store) |
 
 See `docs/ci-cd/secrets-setup.md` for CI/CD configuration details.
 
@@ -424,8 +423,8 @@ See `docs/ci-cd/secrets-setup.md` for CI/CD configuration details.
 # Or manually:
 git checkout dev
 git pull origin dev
-git checkout -b dev/2024-45-tax-calculator
-git push -u origin dev/2024-45-tax-calculator
+git checkout -b feature/2024-45-tax-calculator
+git push -u origin feature/2024-45-tax-calculator
 
 # === MONDAY-THURSDAY ===
 # Daily development cycle
@@ -460,7 +459,7 @@ gh pr create --title "Week 45: Tax Calculator Implementation" --base dev
 # Update local
 git checkout dev
 git pull origin dev
-git branch -d dev/2024-45-tax-calculator
+git branch -d feature/2024-45-tax-calculator
 
 # === AFTER MERGE ===
 # Promote to other environments as needed
@@ -492,7 +491,7 @@ git push
 
 ```bash
 # Update your branch with latest dev
-git checkout dev/2024-45-tax-calculator
+git checkout feature/2024-45-tax-calculator
 git fetch origin
 git merge origin/dev
 
