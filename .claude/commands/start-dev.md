@@ -13,8 +13,8 @@
 **Examples:**
 ```bash
 /start-dev                          # Will prompt for description
-/start-dev tax-calculator           # Creates dev/YYYY-WW-tax-calculator
-/start-dev user-authentication      # Creates dev/YYYY-WW-user-authentication
+/start-dev tax-calculator           # Creates feature/YYYY-WW-tax-calculator
+/start-dev user-authentication      # Creates feature/YYYY-WW-user-authentication
 ```
 
 ---
@@ -93,8 +93,9 @@ Determine the branch name:
 YEAR=$(date +%Y)
 WEEK=$(date +%V)
 
-# Branch name format: dev/YYYY-WW-description
-# Example: dev/2024-51-tax-calculator
+# Branch name format: feature/YYYY-WW-description
+# Example: feature/2024-51-tax-calculator
+# Note: Using 'feature/' prefix to avoid git ref conflict with 'dev' branch
 ```
 
 **Ask the user for branch description if not provided:**
@@ -105,7 +106,7 @@ Use AskUserQuestion to get a brief (2-4 words, hyphenated) description of the fe
 
 ```bash
 # Create the branch
-BRANCH_NAME="dev/${YEAR}-${WEEK}-<description>"
+BRANCH_NAME="feature/${YEAR}-${WEEK}-<description>"
 git checkout -b $BRANCH_NAME
 
 # Push to remote with upstream tracking
@@ -121,9 +122,9 @@ Provide confirmation message:
 ```markdown
 ## Development Branch Created
 
-**Branch:** `dev/YYYY-WW-<description>`
+**Branch:** `feature/YYYY-WW-<description>`
 **Based on:** `dev` @ `<commit-hash>`
-**Remote:** Pushed and tracking `origin/dev/YYYY-WW-<description>`
+**Remote:** Pushed and tracking `origin/feature/YYYY-WW-<description>`
 
 ---
 
@@ -195,7 +196,7 @@ If the user already has a weekly branch for the current week:
 
 ```bash
 # Check for existing weekly branch
-git branch -a | grep "dev/${YEAR}-${WEEK}"
+git branch -a | grep "feature/${YEAR}-${WEEK}"
 ```
 
 If found, ask the user:
@@ -236,7 +237,7 @@ echo "Check your SSH keys or access tokens."
 
 ```bash
 # If branch name collision
-echo "Branch 'dev/YYYY-WW-description' already exists."
+echo "Branch 'feature/YYYY-WW-description' already exists."
 # Offer to add a suffix or use different description
 ```
 
@@ -245,7 +246,7 @@ echo "Branch 'dev/YYYY-WW-description' already exists."
 ## Related Commands
 
 - `/start-pr` - Create PR when development is complete
-- `/promote` - Promote code to main/staging/production
+- `/deploy` - Promote code to main/staging/production
 - `/plan` - Create implementation plan
 - `/implement` - Implement a feature
 

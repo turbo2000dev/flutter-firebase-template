@@ -1,67 +1,241 @@
-# Deploy Command
+---
+description: Deploy to environment (dev|staging|prod)  Use "/deploy --help" for options.
+---
 
-Deploy the application to a Firebase Hosting environment.
+# Deploy
+
+Unified deployment command for all environments.
+
+---
 
 ## Usage
 
 ```
-/deploy <environment>
+/deploy <environment> [options]
 ```
 
-Where `<environment>` is one of:
-- `dev` - Development environment
-- `staging` - Staging/QA environment
+**Environments:** `dev`, `staging`, `prod`
 
-## Production Deployment
-
-**Do NOT use `/deploy prod`** - Production is deployed automatically via CI when you push to main.
-
-Use the promotion workflow instead:
-```bash
-/promote main    # Merges dev → main, CI auto-deploys to production
-```
-
-This ensures:
-- Tests run in CI before deployment
-- Consistent build environment
-- Deployment tags and summaries
-- No local build inconsistencies
-
-## Process (dev/staging only)
-
-1. **Build**
-   - Build Astro landing page (if exists)
-   - Build Flutter web app with `--base-href /app/`
-   - Combine into `public/` directory
-
-2. **Deploy**
-   - Deploy to Firebase Hosting target
-
-3. **Post-deployment verification**
-   - Provide checklist for manual verification
-
-## Commands Used
+## Quick Reference
 
 ```bash
-# Build all components
-./scripts/build-all.sh <env>
-
-# Deploy to Firebase
-./scripts/deploy.sh <env>
+/deploy dev                 # Local build + deploy to dev
+/deploy staging             # Merge dev → staging (CI deploys)
+/deploy staging --local     # Local build + deploy to staging
+/deploy prod                # Merge dev → main (CI deploys everything)
+/deploy prod --hotfix       # Quick web-only deploy to production
+/deploy prod --functions    # Deploy only Cloud Functions
 ```
+
+---
+
+## Options
+
+### Deployment Targets (prod only)
+
+| Option        | Description                                  |
+| ------------- | -------------------------------------------- |
+| `--web`       | Deploy web only (landing page + Flutter web) |
+| `--ios`       | Deploy iOS to TestFlight only                |
+| `--android`   | Deploy Android to Play Store only            |
+| `--functions` | Deploy Cloud Functions only                  |
+| `--rules`     | Deploy Firestore rules only                  |
+
+### Presets (prod only)
+
+| Option      | Description                                               |
+| ----------- | --------------------------------------------------------- |
+| `--all`     | Deploy everything (default for prod)                      |
+| `--hotfix`  | Quick web-only deploy (skips mobile, functions, rules)    |
+| `--release` | Full release: web + iOS + Android with version increment  |
+| `--none`    | Just merge branches, no deployment (sync only)            |
+
+### Other Options
+
+| Option    | Description                                    |
+| --------- | ---------------------------------------------- |
+| `--local` | Force local build + deploy (for staging)       |
+| `--help`  | Show this help message                         |
+
+---
+
+## Environment Behavior
+
+### Development (`/deploy dev`)
+
+Local build and deploy directly to Firebase:
+
+```bash
+# Build locally
+./scripts/build-all.sh dev
+
+# Deploy to dev hosting
+firebase deploy --only hosting:dev
+```
+
+### Staging (`/deploy staging`)
+
+**Default:** Merge dev → staging branch (CI auto-deploys)
+
+```bash
+# Ensure dev is up to date
+git checkout dev && git pull origin dev
+
+# Merge to staging
+git checkout staging
+git pull origin staging
+git merge dev --no-edit
+git push origin staging
+
+# Return to dev
+git checkout dev
+```
+
+**With `--local`:** Build and deploy locally (same as dev)
+
+```bash
+./scripts/build-all.sh staging
+firebase deploy --only hosting:staging
+```
+
+### Production (`/deploy prod`)
+
+Merge dev → main with optional deployment markers. CI handles actual deployment.
+
+| Option            | Commit Message Marker | CI Behavior                        |
+| ----------------- | --------------------- | ---------------------------------- |
+| `--all` (default) | (none)                | Deploy everything                  |
+| `--hotfix`        | `[hotfix]`            | Web only, skip mobile/functions    |
+| `--web`           | `[web-only]`          | Web only                           |
+| `--ios`           | `[ios-only]`          | Web + iOS                          |
+| `--android`       | `[android-only]`      | Web + Android                      |
+| `--functions`     | `[functions-only]`    | Functions only                     |
+| `--rules`         | `[rules-only]`        | Firestore rules only               |
+| `--release`       | `[release]`           | Full deploy + version increment    |
+| `--none`          | `[skip ci]`           | No deployment (branch sync only)   |
+
+**Steps:**
+
+```bash
+# 1. Update branches
+git checkout dev && git pull origin dev
+git checkout main && git pull origin main
+
+# 2. Merge dev → main
+git merge dev --no-edit
+
+# 3. For --release: increment version in pubspec.yaml
+#    Commit: "chore: bump version to X.Y.Z"
+
+# 4. Push with marker (if applicable)
+git push origin main
+
+# 5. Return to dev
+git checkout dev
+```
+
+---
+
+## Examples
+
+```bash
+# Development
+/deploy dev                 # Build + deploy to dev environment
+
+# Staging
+/deploy staging             # Promote dev → staging via CI
+/deploy staging --local     # Build + deploy staging locally
+
+# Production
+/deploy prod                # Full deployment (default --all)
+/deploy prod --hotfix       # Quick web fix (skips mobile builds)
+/deploy prod --release      # Full release with version bump
+/deploy prod --functions    # Deploy only Cloud Functions
+/deploy prod --none         # Sync branches without deploying
+```
+
+---
 
 ## Environment URLs
 
-| Environment | Landing Page                              | Flutter App                                   | Deploy Method |
-| ----------- | ----------------------------------------- | --------------------------------------------- | ------------- |
-| dev         | https://{{DEV_URL}}                       | https://{{DEV_URL}}/app                       | `/deploy dev` |
-| staging     | https://{{PROJECT_NAME}}-staging.web.app  | https://{{PROJECT_NAME}}-staging.web.app/app  | `/promote staging` or `/deploy staging` |
-| prod        | https://{{FIREBASE_PROJECT_ID}}.web.app   | https://{{FIREBASE_PROJECT_ID}}.web.app/app   | `/promote main` (CI auto-deploys) |
+| Environment | Landing Page              | Flutter App                  |
+| ----------- | ------------------------- | ---------------------------- |
+| dev         | {{DEV_URL}}               | {{DEV_URL}}/app              |
+| staging     | {{STAGING_URL}}           | {{STAGING_URL}}/app          |
+| prod        | {{PROD_URL}}              | {{PROD_URL}}/app             |
 
-## Notes
+---
 
-- **Production:** Always use `/promote main` - CI handles build and deploy
-- The `--base-href /app/` flag is essential for Flutter assets to load correctly
-- Use `--skip-build` if you've already built and just want to deploy
-- Add `--functions` to also deploy Cloud Functions
-- Add `--rules` to also deploy Firestore rules
+## Workflow Integration
+
+```
+Feature Branch
+     │
+     │ /start-pr (merge to dev)
+     ▼
+┌─────────┐
+│   dev   │ ← Integration branch
+└────┬────┘
+     │
+     ├──────────────────┬─────────────────┐
+     │                  │                 │
+     │ /deploy staging  │ /deploy prod    │ /deploy prod --hotfix
+     ▼                  ▼                 ▼
+┌─────────┐       ┌─────────┐       ┌─────────┐
+│ staging │       │  prod   │       │  prod   │
+│  (UAT)  │       │ (full)  │       │(web only)│
+└─────────┘       └─────────┘       └─────────┘
+```
+
+**Typical flow:**
+```bash
+/start-dev my-feature       # Create feature branch
+# ... develop ...
+/start-pr                   # Merge to dev
+/deploy staging             # UAT testing (optional)
+/deploy prod                # Ship to production
+```
+
+---
+
+## Error Handling
+
+### Merge Conflicts
+
+```bash
+# If conflicts occur during merge
+echo "Resolve conflicts, then:"
+git add .
+git commit
+git push origin <branch>
+```
+
+### Deployment Failure
+
+```bash
+# Check GitHub Actions logs
+# Retry by pushing again:
+git commit --allow-empty -m "chore: retry deployment"
+git push origin main
+```
+
+### Rollback
+
+```bash
+# Quick rollback (Firebase Hosting only)
+firebase hosting:rollback
+
+# Or revert commit and redeploy
+git revert HEAD
+git push origin main
+```
+
+---
+
+## Related Commands
+
+- `/start-dev` - Start new feature branch
+- `/start-pr` - Create PR and merge to dev
+- `/build-all` - Build all components locally
+
+ARGUMENTS: $ARGUMENTS

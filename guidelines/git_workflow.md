@@ -13,7 +13,7 @@ This document defines the Git workflow for the project, including branching stra
 │                    Branch Hierarchy & Promotion Flow                 │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
-│   Feature Branch (dev/YYYY-WW-*)                                    │
+│   Feature Branch (feature/YYYY-WW-*)                                    │
 │        │                                                            │
 │        │ /start-pr (merge to dev)                                   │
 │        ▼                                                            │
@@ -23,7 +23,7 @@ This document defines the Git workflow for the project, including branching stra
 │        │                                                            │
 │        ├────────────────────────────────────────────┐               │
 │        │                                            │               │
-│        │ /promote main                              │ /promote      │
+│        │ /deploy prod                              │ /deploy      │
 │        │ (auto-deploys to production)               │ staging       │
 │        ▼                                            ▼               │
 │   ┌─────────┐                                  ┌─────────┐          │
@@ -38,7 +38,7 @@ This document defines the Git workflow for the project, including branching stra
 #### `dev`
 - **Purpose:** Integration branch where all features merge
 - **Protection:** Protected, requires PR reviews
-- **Deployment:** None (use `/promote staging` for UAT)
+- **Deployment:** None (use `/deploy staging` for UAT)
 - **Testing:** Full CI/CD pipeline runs on every PR
 - **Naming:** Always `dev`
 - **Flow:** Weekly branches merge here via PR
@@ -47,23 +47,23 @@ This document defines the Git workflow for the project, including branching stra
 
 #### `main`
 - **Purpose:** Production code
-- **Protection:** Protected, only updated via `/promote main`
+- **Protection:** Protected, only updated via `/deploy prod`
 - **Deployment:** Auto-deploys to production on push
 - **Testing:** Code already tested via CI/CD on `dev`
 - **Naming:** Always `main`
-- **Flow:** Updated from `dev` via `/promote main`
+- **Flow:** Updated from `dev` via `/deploy prod`
 
 ### Weekly Development Branches
 
 **Primary Branch Type:** Weekly branches for regular development cycles
 
-**Naming Convention:** `dev/<year>-<week-number>-<brief-description>`
+**Naming Convention:** `feature/<year>-<week-number>-<brief-description>`
 
 **Examples:**
 ```bash
-dev/2024-45-tax-calculator
-dev/2024-46-asset-management
-dev/2024-47-scenario-comparison
+feature/2024-45-tax-calculator
+feature/2024-46-asset-management
+feature/2024-47-scenario-comparison
 ```
 
 **Lifecycle:**
@@ -72,8 +72,8 @@ dev/2024-47-scenario-comparison
 3. Create weekly checkpoint commit at end of week (Friday)
 4. Create PR to `dev` using `/start-pr`
 5. Merge to `dev` after CI/CD passes
-6. (Optional) Promote to `staging` for UAT: `/promote staging`
-7. Deploy to production: `/promote main`
+6. (Optional) Promote to `staging` for UAT: `/deploy staging`
+7. Deploy to production: `/deploy prod`
 8. Delete branch after merge
 
 **See:** `docs/ci-cd/weekly-workflow.md` for detailed weekly workflow guide
@@ -94,7 +94,7 @@ feature/UI-789-dashboard-redesign
 2. Develop feature with commits after each phase
 3. Create PR to `dev` when ready
 4. Merge to `dev` after review
-5. Promote as needed (`/promote staging`, `/promote main`)
+5. Promote as needed (`/deploy staging`, `/deploy prod`)
 6. Delete branch after merge
 
 ### Bug Fix Branches
@@ -693,10 +693,10 @@ git checkout dev
 git pull origin dev
 
 # 2. Create weekly branch (use current year-week)
-git checkout -b dev/2024-45-tax-calculator
+git checkout -b feature/2024-45-tax-calculator
 
 # 3. Push to remote
-git push -u origin dev/2024-45-tax-calculator
+git push -u origin feature/2024-45-tax-calculator
 
 # 4. Develop with Claude Code throughout the week
 /new-feature
@@ -713,8 +713,8 @@ git push
 # See docs/ci-cd/weekly-workflow.md for complete end-of-week process
 
 # 7. After merge to dev, promote as needed
-/promote staging   # For UAT testing (optional)
-/promote main      # Deploy to production
+/deploy staging   # For UAT testing (optional)
+/deploy prod      # Deploy to production
 ```
 
 ### Starting an Ad-Hoc Feature (outside weekly cycle)
@@ -742,8 +742,8 @@ git push -u origin feature/AUTH-123-oauth-login
 gh pr create --base dev
 
 # 7. After merge, promote as needed
-/promote staging   # For UAT (optional)
-/promote main      # Deploy to production
+/deploy staging   # For UAT (optional)
+/deploy prod      # Deploy to production
 ```
 
 ### Syncing with Dev
@@ -752,12 +752,12 @@ gh pr create --base dev
 # Update your branch with latest dev
 git checkout dev
 git pull origin dev
-git checkout dev/2024-45-tax-calculator  # or feature/your-feature
+git checkout feature/2024-45-tax-calculator  # or feature/your-feature
 git merge dev
 # Or: git rebase dev (if no conflicts expected)
 
 # Push updated branch
-git push origin dev/2024-45-tax-calculator
+git push origin feature/2024-45-tax-calculator
 ```
 
 ### Fixing PR Review Feedback
@@ -816,7 +816,7 @@ git push origin feature/your-feature
 - Keep feature branches short-lived (< 1 week)
 - Sync with `dev` regularly
 - Delete branches after merge
-- Use descriptive branch names (dev/YYYY-WW-description)
+- Use descriptive branch names (feature/YYYY-WW-description)
 - Create draft PRs for early feedback
 - Promote code through environments: dev → staging → main → prod
 

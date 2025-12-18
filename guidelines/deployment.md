@@ -209,8 +209,8 @@ Deployments are triggered by GitHub Actions:
 | Push to `main`           | production  | Automatic |
 
 **Promotion Commands:**
-- `/promote staging` - Merges `dev` → `staging` (auto-deploys to staging)
-- `/promote main` - Merges `dev` → `main` (auto-deploys to production)
+- `/deploy staging` - Merges `dev` → `staging` (auto-deploys to staging)
+- `/deploy prod` - Merges `dev` → `main` (auto-deploys to production)
 
 ## Deployment Checklist
 

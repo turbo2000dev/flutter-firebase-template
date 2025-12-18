@@ -395,8 +395,8 @@ Week:       /commit --push (end of day)
             ↓
 Friday:     /start-pr (final quality checks + merge)
             ↓
-After:      /promote staging (optional UAT)
-            /promote main (production)
+After:      /deploy staging (optional UAT)
+            /deploy prod (production)
 ```
 
 **Recommended commit frequency:**
@@ -413,7 +413,7 @@ After:      /promote staging (optional UAT)
 - `/start-dev` - Start new development branch
 - `/start-pr` - Create PR when ready to merge
 - `/code-review` - Review code before committing
-- `/promote` - Promote to staging/production
+- `/deploy` - Promote to staging/production
 
 ---
 

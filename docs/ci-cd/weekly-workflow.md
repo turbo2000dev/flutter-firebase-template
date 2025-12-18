@@ -15,7 +15,7 @@ Monday          → Create weekly branch from dev (/start-dev)
 Monday-Thursday → Development work with daily commits
 Friday          → Testing, cleanup, and weekly checkpoint commit
 Friday EOD      → Create PR and merge to dev (/start-pr)
-After merge     → Promote to staging/main/prod as needed (/promote)
+After merge     → Promote to staging/main/prod as needed (/deploy)
 ```
 
 ## Git Workflow
@@ -235,10 +235,10 @@ After merging to dev, promote as needed:
 
 ```bash
 # (Optional) Deploy to staging for UAT testing
-/promote staging
+/deploy staging
 
 # Deploy to production
-/promote main
+/deploy prod
 ```
 
 ## Handling Incomplete Work
@@ -401,7 +401,7 @@ See `docs/ci-cd/secrets-setup.md` for CI/CD configuration details.
 - **Keep branches focused** - One major feature per week
 - **Document progress** - Update PLAN.md with status
 - **Clean up** - Delete branches after merge
-- **Use promotion flow** - Always promote through environments (`/promote`)
+- **Use promotion flow** - Always promote through environments (`/deploy`)
 
 ### ❌ Don't:
 
@@ -465,10 +465,10 @@ git branch -d feature/2024-45-tax-calculator
 # Promote to other environments as needed
 
 # (Optional) Deploy to staging for UAT testing
-/promote staging
+/deploy staging
 
 # Deploy to production
-/promote main
+/deploy prod
 
 # Ready for next week!
 ```

@@ -152,7 +152,7 @@ python3 scripts/coverage-report.py --ci # Fails if below 80%
 - `/start-dev` - Start new feature development in a weekly branch (from `dev`)
 - `/commit` - Commit changes with proper conventional commit message
 - `/start-pr` - Run quality checks, create PR, and merge to `dev`
-- `/promote` - Promote code to staging, main, or production
+- `/deploy` - Deploy to dev, staging, or prod (with options)
 
 **Planning & Implementation:**
 - `/plan [section-name]` - Create development plan (with optional section name)
@@ -195,23 +195,23 @@ Plans are organized into sections for incremental execution (one section at a ti
 | Environment | Branch | Auto-Deploy | Promotion Command |
 |-------------|--------|-------------|-------------------|
 | Development | `dev` | No | N/A (merge via PR) |
-| Staging | `staging` | Yes (on push) | `/promote staging` |
-| Production | `main` | Yes (on push) | `/promote main` |
+| Staging | `staging` | Yes (on push) | `/deploy staging` |
+| Production | `main` | Yes (on push) | `/deploy prod` |
 
 ## Git Workflow
 
 ### Branch Flow
 ```
-dev/YYYY-WW-* (feature) → dev (integration) → staging (UAT)
+feature/YYYY-WW-* (feature) → dev (integration) → staging (UAT)
                                             → main (production)
 ```
 
 ### Development Cycle
-1. `/start-dev <description>` - Create `dev/YYYY-WW-<description>` branch from `dev`
+1. `/start-dev <description>` - Create `feature/YYYY-WW-<description>` branch from `dev`
 2. Develop, commit, push daily
 3. `/start-pr` - Run checks, create PR to `dev`, merge
-4. `/promote staging` - (Optional) Deploy to staging for UAT
-5. `/promote main` - Deploy to production
+4. `/deploy staging` - (Optional) Deploy to staging for UAT
+5. `/deploy prod` - Deploy to production
 
 ### Hooks
 - **Pre-commit:** Auto-format, lint, run affected tests

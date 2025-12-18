@@ -35,7 +35,7 @@
 │     └─→ Squash merge to dev → Delete branch                         │
 │                                                                     │
 │  5. Post-Merge Recommendations                                      │
-│     └─→ Recommend /promote main or /promote staging                 │
+│     └─→ Recommend /deploy prod or /deploy staging                 │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -180,7 +180,7 @@ Use GitHub CLI to create PR targeting dev:
 
 ```bash
 # Determine PR title from branch name or commits
-# dev/2024-51-tax-calculator → "Week 51: Tax Calculator"
+# feature/2024-51-tax-calculator → "Week 51: Tax Calculator"
 
 gh pr create \
   --base dev \
@@ -259,7 +259,7 @@ Provide recommendations based on the workflow:
 ```markdown
 ## PR Merged Successfully
 
-**Branch:** `dev/YYYY-WW-<description>` → `dev`
+**Branch:** `feature/YYYY-WW-<description>` → `dev`
 **PR:** #<number>
 **Merge commit:** `<hash>`
 
@@ -272,7 +272,7 @@ Provide recommendations based on the workflow:
 Merge your changes to main for a stable release candidate:
 
 ```bash
-/promote main
+/deploy prod
 ```
 
 This will:
@@ -285,7 +285,7 @@ This will:
 Deploy directly to staging for user acceptance testing:
 
 ```bash
-/promote staging
+/deploy staging
 ```
 
 This will:
@@ -298,7 +298,7 @@ This will:
 When ready for production:
 
 ```bash
-/promote main
+/deploy prod
 ```
 
 This will:
@@ -310,8 +310,8 @@ This will:
 ## Typical Workflow
 
 1. `/start-pr` → Merge to dev ✅ (done)
-2. `/promote staging` → (Optional) Test on staging
-3. `/promote main` → Deploy to production
+2. `/deploy staging` → (Optional) Test on staging
+3. `/deploy prod` → Deploy to production
 
 ---
 
@@ -388,7 +388,7 @@ At the end of Phase 2, provide a summary:
 ## Related Commands
 
 - `/start-dev` - Start new development branch
-- `/promote` - Promote to main/staging/production
+- `/deploy` - Deploy to dev/staging/prod
 - `/code-review` - Run code review before PR
 - `/test-audit` - Detailed test coverage analysis
 
