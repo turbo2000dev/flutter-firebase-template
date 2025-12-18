@@ -170,8 +170,7 @@ Plans are organized into sections for incremental execution (one section at a ti
 ```
 
 **Build & Deploy:**
-- `/deploy` - Deploy to environment
-- `/build-all` - Build all components
+- `/deploy` - Build and deploy to environment (use `--build-only` to skip deploy)
 
 **Quality Assurance:**
 - `/code-review` - Review code quality

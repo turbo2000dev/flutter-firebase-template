@@ -4,7 +4,7 @@ description: Deploy to environment (dev|staging|prod)  Use "/deploy --help" for 
 
 # Deploy
 
-Unified deployment command for all environments.
+Unified command for building and deploying to all environments.
 
 ---
 
@@ -20,6 +20,7 @@ Unified deployment command for all environments.
 
 ```bash
 /deploy dev                 # Local build + deploy to dev
+/deploy dev --build-only    # Build only, no deploy (test build locally)
 /deploy staging             # Merge dev → staging (CI deploys)
 /deploy staging --local     # Local build + deploy to staging
 /deploy prod                # Merge dev → main (CI deploys everything)
@@ -30,6 +31,13 @@ Unified deployment command for all environments.
 ---
 
 ## Options
+
+### Build Options
+
+| Option         | Description                                       |
+| -------------- | ------------------------------------------------- |
+| `--build-only` | Build without deploying (test build locally)      |
+| `--local`      | Force local build + deploy (for staging)          |
 
 ### Deployment Targets (prod only)
 
@@ -50,12 +58,11 @@ Unified deployment command for all environments.
 | `--release` | Full release: web + iOS + Android with version increment  |
 | `--none`    | Just merge branches, no deployment (sync only)            |
 
-### Other Options
+### Help
 
-| Option    | Description                                    |
-| --------- | ---------------------------------------------- |
-| `--local` | Force local build + deploy (for staging)       |
-| `--help`  | Show this help message                         |
+| Option   | Description            |
+| -------- | ---------------------- |
+| `--help` | Show this help message |
 
 ---
 
@@ -69,7 +76,7 @@ Local build and deploy directly to Firebase:
 # Build locally
 ./scripts/build-all.sh dev
 
-# Deploy to dev hosting
+# Deploy to dev hosting (skip if --build-only)
 firebase deploy --only hosting:dev
 ```
 
@@ -136,9 +143,54 @@ git checkout dev
 
 ---
 
+## Build Process (`--build-only`)
+
+When using `--build-only` or as part of local deploy, the build process:
+
+1. **Clean** - Remove existing `public/` directory
+
+2. **Build Astro Landing Page** (if `landing-page/` exists)
+   - Install npm dependencies
+   - Run `npm run build`
+   - Copy `dist/*` to `public/`
+
+3. **Build Flutter Web App**
+   - Run `flutter build web` with appropriate flags
+   - Use `--dart-define=ENVIRONMENT=<env>` for configuration
+   - Use `--base-href /app/` for subdirectory hosting
+   - Copy `build/web/*` to `public/app/`
+
+### Output Structure
+
+```
+public/
+├── index.html        # Astro landing page
+├── css/              # Landing page assets
+├── images/           # Landing page images
+└── app/
+    ├── index.html    # Flutter app
+    ├── main.dart.js  # Flutter compiled code
+    ├── flutter.js    # Flutter runtime
+    └── assets/       # Flutter assets
+```
+
+### Build Flags by Environment
+
+| Environment | Mode    | Optimization | Debug Banner |
+|-------------|---------|--------------|--------------|
+| dev         | debug   | none         | shown        |
+| staging     | debug   | none         | hidden       |
+| prod        | release | full         | hidden       |
+
+---
+
 ## Examples
 
 ```bash
+# Build only (no deploy)
+/deploy dev --build-only    # Test dev build locally
+/deploy prod --build-only   # Test prod build locally
+
 # Development
 /deploy dev                 # Build + deploy to dev environment
 
@@ -191,6 +243,7 @@ Feature Branch
 ```bash
 /start-dev my-feature       # Create feature branch
 # ... develop ...
+/deploy dev --build-only    # Test build works (optional)
 /start-pr                   # Merge to dev
 /deploy staging             # UAT testing (optional)
 /deploy prod                # Ship to production
@@ -236,6 +289,6 @@ git push origin main
 
 - `/start-dev` - Start new feature branch
 - `/start-pr` - Create PR and merge to dev
-- `/build-all` - Build all components locally
+- `/commit` - Commit with conventional message
 
 ARGUMENTS: $ARGUMENTS

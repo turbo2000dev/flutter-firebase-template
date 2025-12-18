@@ -398,7 +398,7 @@ Available commands in `.claude/commands/`:
 - `/execute-plan` - Execute plans from PLAN.md
 - `/implement` - Implement features
 - `/deploy` - Deploy to an environment
-- `/build-all` - Build all components
+- `/deploy` - Build and deploy to environment (use `--build-only` to skip deploy)
 - `/landing-page` - Work on landing page
 
 ## Firebase Integration
