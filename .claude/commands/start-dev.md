@@ -211,7 +211,7 @@ If work extends beyond a week:
 Inform the user they can:
 1. Create a PR with partial work and merge
 2. Continue on the same branch into next week
-3. Reference `docs/ci-cd/weekly-workflow.md` for detailed guidance
+3. Reference `docs/framework/ci-cd/weekly-workflow.md` for detailed guidance
 
 ---
 
@@ -254,6 +254,6 @@ echo "Branch 'feature/YYYY-WW-description' already exists."
 
 ## Related Documentation
 
-- [Weekly Workflow](../docs/ci-cd/weekly-workflow.md) - Complete weekly cycle guide
+- [Weekly Workflow](../docs/framework/ci-cd/weekly-workflow.md) - Complete weekly cycle guide
 - [Git Workflow](../guidelines/git_workflow.md) - Branching and commit conventions
 - [Development Workflow](../CLAUDE.md) - Overall development process

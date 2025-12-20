@@ -201,8 +201,8 @@ If you are executing Phase 1 from PLAN.md:
    # Check what specifications already exist
    git log --oneline --all -20
 
-   # Verify existing docs
-   # Use Glob: docs/**/*.md, specs/**/*.md
+   # Verify existing docs (project docs at root, framework in docs/framework/)
+   # Use Glob: docs/**/*.md, specs/**/*.md (excluding docs/framework/)
 
    # Check for architecture commits
    ```

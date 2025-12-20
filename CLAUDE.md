@@ -189,6 +189,25 @@ Plans are organized into sections for incremental execution (one section at a ti
 | `guidelines/astro-development.md` | Landing page development |
 | `guidelines/deployment.md` | Multi-environment deployment |
 
+## Documentation Structure
+
+```
+docs/
+├── README.md              # Documentation overview
+├── framework/             # Framework/template docs (DO NOT MODIFY)
+│   ├── development/       # Claude Code workflow, git hooks
+│   ├── ci-cd/             # CI/CD, deployment, weekly workflow
+│   └── testing/           # Coverage requirements
+└── [project-dirs]/        # Project-specific docs (create as needed)
+    ├── api/               # API documentation
+    ├── architecture/      # ADRs (Architecture Decision Records)
+    ├── features/          # Feature specs
+    └── specs/             # Technical specifications
+```
+
+**Framework docs** (`docs/framework/`): Reference documentation for the template - do not modify.
+**Project docs** (`docs/`): Create directories as needed for project-specific documentation.
+
 ## Environments
 
 | Environment | Branch | Auto-Deploy | Promotion Command |

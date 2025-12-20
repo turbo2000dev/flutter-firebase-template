@@ -189,4 +189,4 @@ npm run astro check
 
 - **Astro Docs**: https://docs.astro.build
 - **Project Guidelines**: `guidelines/astro-development.md`
-- **Integration Guide**: `docs/Astro Flutter Integration.md`
+- **Integration Guide**: `docs/framework/Astro Flutter Integration.md`

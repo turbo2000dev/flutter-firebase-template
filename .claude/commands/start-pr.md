@@ -396,6 +396,6 @@ At the end of Phase 2, provide a summary:
 
 ## Related Documentation
 
-- [Weekly Workflow](../docs/ci-cd/weekly-workflow.md) - End of week process
+- [Weekly Workflow](../docs/framework/ci-cd/weekly-workflow.md) - End of week process
 - [Git Workflow](../guidelines/git_workflow.md) - PR process details
 - [CI/CD Guide](../guidelines/cicd.md) - Pipeline configuration

@@ -420,4 +420,4 @@ After:      /deploy staging (optional UAT)
 ## Related Documentation
 
 - [Git Workflow](../guidelines/git_workflow.md) - Commit conventions
-- [Weekly Workflow](../docs/ci-cd/weekly-workflow.md) - Development cycle
+- [Weekly Workflow](../docs/framework/ci-cd/weekly-workflow.md) - Development cycle

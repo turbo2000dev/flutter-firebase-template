@@ -4,7 +4,7 @@
 
 This document describes the plan-based development workflow that enables systematic, transparent development with user involvement in design decisions and real-time progress tracking.
 
-**Note:** This project uses a weekly Git branching workflow. See `docs/ci-cd/weekly-workflow.md` for Git branching strategy and `guidelines/git_workflow.md` for detailed Git practices.
+**Note:** This project uses a weekly Git branching workflow. See `docs/framework/ci-cd/weekly-workflow.md` for Git branching strategy and `guidelines/git_workflow.md` for detailed Git practices.
 
 ## Workflow Summary
 
